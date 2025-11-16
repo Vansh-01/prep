@@ -1,8 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { AudioRecorder, blobToBase64 } from "@/utils/audioRecorder";
 import { 
   Mic, 
   MicOff, 
@@ -38,6 +41,7 @@ const mockQuestions = [
 ];
 
 export const Demo = () => {
+  const { toast } = useToast();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -47,6 +51,9 @@ export const Demo = () => {
   const [relevance, setRelevance] = useState(0);
   const [faceDetected, setFaceDetected] = useState(true);
   const [eyeContact, setEyeContact] = useState(true);
+  const [transcript, setTranscript] = useState<string[]>([]);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const audioRecorderRef = useRef<AudioRecorder | null>(null);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -65,17 +72,80 @@ export const Demo = () => {
     return () => clearInterval(interval);
   }, [isRecording, recordingTime, confidence, clarity, relevance]);
 
-  const handleStartRecording = () => {
-    setIsRecording(true);
-    setShowFeedback(true);
-    setRecordingTime(0);
-    setConfidence(0);
-    setClarity(0);
-    setRelevance(0);
+  const handleStartRecording = async () => {
+    try {
+      audioRecorderRef.current = new AudioRecorder();
+      await audioRecorderRef.current.start();
+      setIsRecording(true);
+      setShowFeedback(true);
+      setRecordingTime(0);
+      setConfidence(0);
+      setClarity(0);
+      setRelevance(0);
+      setTranscript([]);
+      
+      toast({
+        title: "Recording started",
+        description: "Speak clearly into your microphone",
+      });
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      toast({
+        title: "Recording failed",
+        description: "Please allow microphone access and try again",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleStopRecording = () => {
-    setIsRecording(false);
+  const handleStopRecording = async () => {
+    if (!audioRecorderRef.current) return;
+    
+    try {
+      setIsRecording(false);
+      setIsTranscribing(true);
+      
+      const audioBlob = await audioRecorderRef.current.stop();
+      const base64Audio = await blobToBase64(audioBlob);
+      
+      console.log('Sending audio for transcription...');
+      
+      // Send to transcription endpoint
+      const { data, error } = await supabase.functions.invoke('transcribe-audio', {
+        body: { audio: base64Audio }
+      });
+      
+      if (error) {
+        console.error('Transcription error:', error);
+        throw error;
+      }
+      
+      if (data?.text) {
+        console.log('Transcription received:', data.text);
+        setTranscript([data.text]);
+        
+        // Simulate feedback based on transcript length
+        const wordCount = data.text.split(' ').length;
+        setConfidence(Math.min(95, 60 + wordCount * 2));
+        setClarity(Math.min(92, 70 + wordCount * 1.5));
+        setRelevance(Math.min(88, 65 + wordCount * 1.8));
+        
+        toast({
+          title: "Transcription complete",
+          description: "Your response has been analyzed",
+        });
+      }
+      
+      setIsTranscribing(false);
+    } catch (error) {
+      console.error('Error stopping recording:', error);
+      setIsTranscribing(false);
+      toast({
+        title: "Transcription failed",
+        description: "Please try recording again",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleNextQuestion = () => {
@@ -90,6 +160,9 @@ export const Demo = () => {
   };
 
   const handleReset = () => {
+    if (audioRecorderRef.current?.isRecording()) {
+      audioRecorderRef.current.stop();
+    }
     setCurrentQuestion(0);
     setIsRecording(false);
     setShowFeedback(false);
@@ -97,6 +170,8 @@ export const Demo = () => {
     setConfidence(0);
     setClarity(0);
     setRelevance(0);
+    setTranscript([]);
+    setIsTranscribing(false);
   };
 
   const formatTime = (seconds: number) => {
@@ -312,21 +387,25 @@ export const Demo = () => {
 
               {/* Live Transcript Preview */}
               <Card className="p-6 border-border">
-                <h3 className="text-lg font-semibold mb-4">Live Transcript</h3>
-                {isRecording && recordingTime > 2 ? (
-                  <div className="text-sm text-muted-foreground space-y-2">
-                    <p className="animate-fade-in">
-                      "I have been working in software development for the past two years..."
-                    </p>
-                    {recordingTime > 5 && (
-                      <p className="animate-fade-in">
-                        "My experience includes working with React and TypeScript..."
+                <h3 className="text-lg font-semibold mb-4">Transcript</h3>
+                {isTranscribing ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    <span>Transcribing your response...</span>
+                  </div>
+                ) : transcript.length > 0 ? (
+                  <div className="text-sm space-y-2">
+                    {transcript.map((text, idx) => (
+                      <p key={idx} className="animate-fade-in">
+                        "{text}"
                       </p>
-                    )}
+                    ))}
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    Your responses will appear here in real-time
+                    {isRecording 
+                      ? "Recording... Stop recording to see your transcript" 
+                      : "Your responses will appear here after recording"}
                   </p>
                 )}
               </Card>
@@ -336,8 +415,8 @@ export const Demo = () => {
           {/* Demo Notice */}
           <Card className="mt-6 p-4 bg-primary/5 border-primary/20">
             <p className="text-sm text-center text-muted-foreground">
-              This is a demo preview. Sign up to experience the full AI interview with actual voice recording, 
-              comprehensive analysis, and detailed feedback reports.
+              <strong>Real voice recording enabled!</strong> Your audio is transcribed using OpenAI Whisper. 
+              Sign up to access full interview analytics, detailed feedback reports, and progress tracking.
             </p>
           </Card>
         </div>
