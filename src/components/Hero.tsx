@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-interview.jpg";
 
 export const Hero = () => {
@@ -9,6 +10,18 @@ export const Hero = () => {
       <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
       <div className="absolute top-20 right-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl"></div>
       <div className="absolute bottom-20 left-10 w-96 h-96 bg-secondary/20 rounded-full blur-3xl"></div>
+      
+      {/* Header with Sign In */}
+      <div className="absolute top-0 left-0 right-0 z-20 py-6">
+        <div className="container px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+          <div className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+            Interview Coach AI
+          </div>
+          <Link to="/auth">
+            <Button variant="outline">Sign In</Button>
+          </Link>
+        </div>
+      </div>
       
       <div className="container px-4 sm:px-6 lg:px-8 py-20 relative z-10">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
