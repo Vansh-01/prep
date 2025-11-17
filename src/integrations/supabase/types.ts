@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      interview_sessions: {
+        Row: {
+          ai_feedback: string | null
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          score: number | null
+          transcript: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_feedback?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          score?: number | null
+          transcript?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_feedback?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          score?: number | null
+          transcript?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
