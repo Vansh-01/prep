@@ -15,6 +15,7 @@ import {
 import { User, LogOut, TrendingUp, Calendar, Award, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 interface InterviewSession {
   id: string;
@@ -219,6 +220,60 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Score Progress Chart */}
+        {sessions.length > 0 && sessions.some(s => s.score !== null) && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Score Progress</CardTitle>
+              <CardDescription>
+                Track your improvement over time
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart
+                  data={sessions
+                    .filter(s => s.score !== null)
+                    .reverse()
+                    .map(s => ({
+                      date: format(new Date(s.created_at), "MMM d"),
+                      score: s.score,
+                    }))}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis 
+                    dataKey="date" 
+                    className="text-xs"
+                    tick={{ fill: "hsl(var(--muted-foreground))" }}
+                  />
+                  <YAxis 
+                    domain={[0, 100]}
+                    className="text-xs"
+                    tick={{ fill: "hsl(var(--muted-foreground))" }}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "var(--radius)",
+                      color: "hsl(var(--foreground))"
+                    }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="score" 
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={2}
+                    dot={{ fill: "hsl(var(--primary))", r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Interview History */}
         <Card>
