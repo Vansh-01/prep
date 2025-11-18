@@ -12,7 +12,14 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { User, LogOut, TrendingUp, Calendar, Award, Clock } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { User, LogOut, TrendingUp, Calendar, Award, Clock, Sparkles, Mic, BarChart3, Target } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -37,6 +44,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [sessions, setSessions] = useState<InterviewSession[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [showWelcome, setShowWelcome] = useState(false);
   const [stats, setStats] = useState({
     totalInterviews: 0,
     averageScore: 0,
@@ -94,7 +102,20 @@ export default function Dashboard() {
     if (data) {
       setSessions(data);
       calculateStats(data);
+      
+      // Show welcome dialog for first-time users
+      if (data.length === 0) {
+        const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
+        if (!hasSeenWelcome) {
+          setShowWelcome(true);
+        }
+      }
     }
+  };
+
+  const handleCloseWelcome = () => {
+    localStorage.setItem('hasSeenWelcome', 'true');
+    setShowWelcome(false);
   };
 
   const calculateStats = (sessions: InterviewSession[]) => {
@@ -131,6 +152,83 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Welcome Dialog */}
+      <Dialog open={showWelcome} onOpenChange={setShowWelcome}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-2xl">
+              <Sparkles className="w-6 h-6 text-primary" />
+              Welcome to Interview Coach AI!
+            </DialogTitle>
+            <DialogDescription className="text-base pt-2">
+              Let's get you started on your journey to interview mastery
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            {/* Step 1 */}
+            <div className="flex gap-4">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Mic className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg mb-1">Practice Realistic Interviews</h3>
+                <p className="text-muted-foreground">
+                  Answer AI-generated questions using your voice. Our system transcribes and analyzes your responses in real-time.
+                </p>
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div className="flex gap-4">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center">
+                <BarChart3 className="w-6 h-6 text-secondary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg mb-1">Get Instant Feedback</h3>
+                <p className="text-muted-foreground">
+                  Receive detailed analysis on your confidence, clarity, and relevance. Track your scores over time to see your improvement.
+                </p>
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="flex gap-4">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center">
+                <Target className="w-6 h-6 text-accent" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg mb-1">Land Your Dream Job</h3>
+                <p className="text-muted-foreground">
+                  Build confidence through practice. Review your transcripts and feedback to continuously improve your interview skills.
+                </p>
+              </div>
+            </div>
+
+            {/* CTA */}
+            <Card className="bg-gradient-primary/5 border-primary/20 p-6">
+              <div className="text-center space-y-3">
+                <h4 className="font-semibold text-lg">Ready to start?</h4>
+                <p className="text-sm text-muted-foreground">
+                  Head to the home page and click "Try the AI Interview Experience" to begin your first practice session!
+                </p>
+                <div className="flex gap-2 justify-center pt-2">
+                  <Link to="/">
+                    <Button variant="default" className="gap-2">
+                      <Mic className="w-4 h-4" />
+                      Start First Interview
+                    </Button>
+                  </Link>
+                  <Button variant="outline" onClick={handleCloseWelcome}>
+                    Got it!
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <header className="border-b bg-card">
         <div className="container px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
