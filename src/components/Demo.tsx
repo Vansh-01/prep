@@ -40,6 +40,15 @@ const mockQuestions = [
   },
 ];
 
+interface QuestionData {
+  question: string;
+  transcript: string;
+  confidence: number;
+  clarity: number;
+  relevance: number;
+  duration: number;
+}
+
 export const Demo = () => {
   const { toast } = useToast();
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -53,6 +62,8 @@ export const Demo = () => {
   const [eyeContact, setEyeContact] = useState(true);
   const [transcript, setTranscript] = useState<string[]>([]);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [sessionData, setSessionData] = useState<QuestionData[]>([]);
+  const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const audioRecorderRef = useRef<AudioRecorder | null>(null);
 
   useEffect(() => {
@@ -74,6 +85,11 @@ export const Demo = () => {
 
   const handleStartRecording = async () => {
     try {
+      // Start session timer on first question
+      if (currentQuestion === 0 && sessionStartTime === null) {
+        setSessionStartTime(Date.now());
+      }
+      
       audioRecorderRef.current = new AudioRecorder();
       await audioRecorderRef.current.start();
       setIsRecording(true);
@@ -148,14 +164,82 @@ export const Demo = () => {
     }
   };
 
+  const saveSessionToDatabase = async (finalSessionData: QuestionData[]) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to save your interview session",
+      });
+      return;
+    }
+
+    if (finalSessionData.length === 0) return;
+
+    const fullTranscript = finalSessionData.map(q => `Q: ${q.question}\nA: ${q.transcript}`).join('\n\n');
+    const totalDuration = finalSessionData.reduce((acc, q) => acc + q.duration, 0);
+    const avgConfidence = finalSessionData.reduce((acc, q) => acc + q.confidence, 0) / finalSessionData.length;
+    const avgClarity = finalSessionData.reduce((acc, q) => acc + q.clarity, 0) / finalSessionData.length;
+    const avgRelevance = finalSessionData.reduce((acc, q) => acc + q.relevance, 0) / finalSessionData.length;
+    const overallScore = Math.round((avgConfidence + avgClarity + avgRelevance) / 3);
+    
+    const feedback = `Overall Performance: ${overallScore}%\n\n` +
+      `Confidence: ${Math.round(avgConfidence)}% - ${avgConfidence >= 80 ? 'Excellent confidence level!' : 'Work on building more confidence in your responses.'}\n` +
+      `Clarity: ${Math.round(avgClarity)}% - ${avgClarity >= 80 ? 'Very clear communication!' : 'Try to speak more clearly and concisely.'}\n` +
+      `Relevance: ${Math.round(avgRelevance)}% - ${avgRelevance >= 80 ? 'Great job staying on topic!' : 'Focus on addressing the question more directly.'}\n\n` +
+      `Completed ${finalSessionData.length} questions in ${Math.floor(totalDuration / 60)}m ${totalDuration % 60}s.`;
+
+    const { error } = await supabase
+      .from('interview_sessions')
+      .insert({
+        user_id: session.user.id,
+        transcript: fullTranscript,
+        ai_feedback: feedback,
+        score: overallScore,
+        duration_seconds: totalDuration,
+      });
+
+    if (error) {
+      console.error('Error saving session:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save interview session",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Session saved!",
+        description: "Your interview has been saved to your dashboard",
+      });
+    }
+  };
+
   const handleNextQuestion = () => {
-    if (currentQuestion < mockQuestions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
-      setShowFeedback(false);
-      setRecordingTime(0);
-      setConfidence(0);
-      setClarity(0);
-      setRelevance(0);
+    // Save current question data
+    if (transcript.length > 0) {
+      const questionData: QuestionData = {
+        question: mockQuestions[currentQuestion].question,
+        transcript: transcript[0] || '',
+        confidence,
+        clarity,
+        relevance,
+        duration: recordingTime,
+      };
+      const updatedSessionData = [...sessionData, questionData];
+      setSessionData(updatedSessionData);
+
+      if (currentQuestion < mockQuestions.length - 1) {
+        setCurrentQuestion(currentQuestion + 1);
+        setShowFeedback(false);
+        setRecordingTime(0);
+        setConfidence(0);
+        setClarity(0);
+        setRelevance(0);
+      } else {
+        // Last question completed - save to database
+        saveSessionToDatabase(updatedSessionData);
+      }
     }
   };
 
@@ -172,6 +256,8 @@ export const Demo = () => {
     setRelevance(0);
     setTranscript([]);
     setIsTranscribing(false);
+    setSessionData([]);
+    setSessionStartTime(null);
   };
 
   const formatTime = (seconds: number) => {
