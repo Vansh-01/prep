@@ -98,19 +98,24 @@ const CodingPractice = () => {
   const { toast } = useToast();
   const [language, setLanguage] = useState("javascript");
   const [code, setCode] = useState(languageTemplates.javascript);
-  const [output, setOutput] = useState("");
+  const [standardOutput, setStandardOutput] = useState<string[]>([]);
+  const [errorOutput, setErrorOutput] = useState<string[]>([]);
 
   const handleLanguageChange = (newLanguage: string) => {
     setLanguage(newLanguage);
     setCode(languageTemplates[newLanguage]);
-    setOutput("");
+    setStandardOutput([]);
+    setErrorOutput([]);
   };
 
   const handleRunCode = () => {
     if (language !== "javascript" && language !== "typescript") {
-      setOutput(`Note: Direct execution is only supported for JavaScript and TypeScript.
-For ${language.toUpperCase()}, this editor provides syntax highlighting and code writing practice.
-To run ${language.toUpperCase()} code, you would need to use a compiler/interpreter on your local machine or an online judge platform.`);
+      setStandardOutput([]);
+      setErrorOutput([
+        `Note: Direct execution is only supported for JavaScript and TypeScript.`,
+        `For ${language.toUpperCase()}, this editor provides syntax highlighting and code writing practice.`,
+        `To run ${language.toUpperCase()} code, you would need to use a compiler/interpreter on your local machine or an online judge platform.`
+      ]);
       toast({
         title: "Information",
         description: `${language.toUpperCase()} execution requires external tools`,
@@ -121,9 +126,19 @@ To run ${language.toUpperCase()} code, you would need to use a compiler/interpre
     try {
       // Capture console.log output
       const logs: string[] = [];
+      const errors: string[] = [];
       const originalLog = console.log;
+      const originalError = console.error;
+      const originalWarn = console.warn;
+      
       console.log = (...args) => {
         logs.push(args.join(" "));
+      };
+      console.error = (...args) => {
+        errors.push(args.join(" "));
+      };
+      console.warn = (...args) => {
+        errors.push(`Warning: ${args.join(" ")}`);
       };
 
       // Execute the code
@@ -134,16 +149,21 @@ To run ${language.toUpperCase()} code, you would need to use a compiler/interpre
         eval(code);
       }
 
-      // Restore console.log
+      // Restore console methods
       console.log = originalLog;
+      console.error = originalError;
+      console.warn = originalWarn;
 
-      setOutput(logs.join("\n") || "Code executed successfully!");
+      setStandardOutput(logs.length > 0 ? logs : ["Code executed successfully!"]);
+      setErrorOutput(errors);
+      
       toast({
         title: "Success",
         description: "Code executed successfully",
       });
     } catch (error) {
-      setOutput(`Error: ${error instanceof Error ? error.message : "Unknown error"}`);
+      setStandardOutput([]);
+      setErrorOutput([`Error: ${error instanceof Error ? error.message : "Unknown error"}`]);
       toast({
         title: "Error",
         description: "Failed to execute code",
@@ -154,7 +174,8 @@ To run ${language.toUpperCase()} code, you would need to use a compiler/interpre
 
   const handleReset = () => {
     setCode(languageTemplates[language]);
-    setOutput("");
+    setStandardOutput([]);
+    setErrorOutput([]);
   };
 
   return (
@@ -217,9 +238,41 @@ To run ${language.toUpperCase()} code, you would need to use a compiler/interpre
           </Card>
 
           <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Output</h2>
-            <div className="bg-muted rounded-lg p-4 min-h-[500px] font-mono text-sm whitespace-pre-wrap">
-              {output || "Run your code to see the output here..."}
+            <h2 className="text-xl font-semibold mb-4">Console Output</h2>
+            <div className="grid grid-cols-1 gap-4">
+              {/* Standard Output */}
+              <div>
+                <h3 className="text-sm font-medium mb-2 text-muted-foreground">Standard Output</h3>
+                <div className="bg-muted rounded-lg p-4 min-h-[230px] font-mono text-sm overflow-auto">
+                  {standardOutput.length === 0 ? (
+                    <div className="text-muted-foreground">Run your code to see the output here...</div>
+                  ) : (
+                    standardOutput.map((line, index) => (
+                      <div key={index} className="flex gap-4 hover:bg-accent/50">
+                        <span className="text-muted-foreground select-none min-w-[2rem] text-right">{index + 1}</span>
+                        <span className="flex-1">{line}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Error Output */}
+              <div>
+                <h3 className="text-sm font-medium mb-2 text-destructive">Errors & Warnings</h3>
+                <div className="bg-muted rounded-lg p-4 min-h-[230px] font-mono text-sm overflow-auto">
+                  {errorOutput.length === 0 ? (
+                    <div className="text-muted-foreground">No errors</div>
+                  ) : (
+                    errorOutput.map((line, index) => (
+                      <div key={index} className="flex gap-4 hover:bg-accent/50">
+                        <span className="text-muted-foreground select-none min-w-[2rem] text-right">{index + 1}</span>
+                        <span className="flex-1 text-destructive">{line}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
           </Card>
         </div>

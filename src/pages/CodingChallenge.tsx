@@ -50,6 +50,8 @@ const CodingChallenge = () => {
   const [language, setLanguage] = useState("javascript");
   const [code, setCode] = useState(challengeTemplates.javascript);
   const [testResults, setTestResults] = useState<string[]>([]);
+  const [standardOutput, setStandardOutput] = useState<string[]>([]);
+  const [errorOutput, setErrorOutput] = useState<string[]>([]);
 
   const challenge = {
     title: "Two Sum",
@@ -73,12 +75,18 @@ const CodingChallenge = () => {
     setLanguage(newLanguage);
     setCode(challengeTemplates[newLanguage]);
     setTestResults([]);
+    setStandardOutput([]);
+    setErrorOutput([]);
   };
 
   const handleRunTests = () => {
     if (language !== "javascript" && language !== "typescript") {
-      setTestResults([`Note: Automated testing is only supported for JavaScript and TypeScript.
-For ${language.toUpperCase()}, please test your solution manually or use an external compiler/interpreter.`]);
+      setTestResults([]);
+      setStandardOutput([]);
+      setErrorOutput([
+        `Note: Automated testing is only supported for JavaScript and TypeScript.`,
+        `For ${language.toUpperCase()}, please test your solution manually or use an external compiler/interpreter.`
+      ]);
       toast({
         title: "Information",
         description: `${language.toUpperCase()} testing requires external tools`,
@@ -88,6 +96,23 @@ For ${language.toUpperCase()}, please test your solution manually or use an exte
 
     try {
       const results: string[] = [];
+      const logs: string[] = [];
+      const errors: string[] = [];
+      
+      // Capture console output
+      const originalLog = console.log;
+      const originalError = console.error;
+      const originalWarn = console.warn;
+      
+      console.log = (...args) => {
+        logs.push(args.join(" "));
+      };
+      console.error = (...args) => {
+        errors.push(args.join(" "));
+      };
+      console.warn = (...args) => {
+        errors.push(`Warning: ${args.join(" ")}`);
+      };
       
       // Execute code and get the function
       if (language === "typescript") {
@@ -107,7 +132,14 @@ For ${language.toUpperCase()}, please test your solution manually or use an exte
         );
       });
 
+      // Restore console methods
+      console.log = originalLog;
+      console.error = originalError;
+      console.warn = originalWarn;
+
       setTestResults(results);
+      setStandardOutput(logs);
+      setErrorOutput(errors);
       
       const allPassed = results.every(r => r.startsWith("✓"));
       toast({
@@ -116,10 +148,12 @@ For ${language.toUpperCase()}, please test your solution manually or use an exte
         variant: allPassed ? "default" : "destructive",
       });
     } catch (error) {
-      setTestResults([`Error: ${error instanceof Error ? error.message : "Unknown error"}`]);
+      setTestResults([]);
+      setStandardOutput([]);
+      setErrorOutput([`Error: ${error instanceof Error ? error.message : "Unknown error"}`]);
       toast({
         title: "Error",
-        description: "Failed to execute tests",
+        description: "Failed to run tests",
         variant: "destructive",
       });
     }
@@ -208,25 +242,70 @@ For ${language.toUpperCase()}, please test your solution manually or use an exte
               </div>
             </Card>
 
-            {testResults.length > 0 && (
+            {(testResults.length > 0 || standardOutput.length > 0 || errorOutput.length > 0) && (
               <Card className="p-6">
                 <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                   <CheckCircle className="w-5 h-5" />
                   Test Results
                 </h2>
-                <div className="space-y-2">
-                  {testResults.map((result, index) => (
-                    <div
-                      key={index}
-                      className={`p-3 rounded-lg font-mono text-sm ${
-                        result.startsWith("✓")
-                          ? "bg-green-500/10 text-green-700 dark:text-green-400"
-                          : "bg-red-500/10 text-red-700 dark:text-red-400"
-                      }`}
-                    >
-                      {result}
+                <div className="space-y-2 mb-6">
+                  {testResults.length === 0 ? (
+                    <p className="text-muted-foreground">Run tests to see results...</p>
+                  ) : (
+                    testResults.map((result, index) => (
+                      <div
+                        key={index}
+                        className={`p-3 rounded-lg font-mono text-sm ${
+                          result.startsWith("✓")
+                            ? "bg-green-500/10 text-green-700 dark:text-green-400"
+                            : result.startsWith("✗")
+                            ? "bg-red-500/10 text-red-700 dark:text-red-400"
+                            : "bg-muted"
+                        }`}
+                      >
+                        {result}
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-semibold mb-4">Console Output</h3>
+                  <div className="grid grid-cols-1 gap-4">
+                    {/* Standard Output */}
+                    <div>
+                      <h4 className="text-sm font-medium mb-2 text-muted-foreground">Standard Output</h4>
+                      <div className="bg-muted rounded-lg p-4 min-h-[120px] font-mono text-sm overflow-auto">
+                        {standardOutput.length === 0 ? (
+                          <div className="text-muted-foreground">No output</div>
+                        ) : (
+                          standardOutput.map((line, index) => (
+                            <div key={index} className="flex gap-4 hover:bg-accent/50">
+                              <span className="text-muted-foreground select-none min-w-[2rem] text-right">{index + 1}</span>
+                              <span className="flex-1">{line}</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
                     </div>
-                  ))}
+
+                    {/* Error Output */}
+                    <div>
+                      <h4 className="text-sm font-medium mb-2 text-destructive">Errors & Warnings</h4>
+                      <div className="bg-muted rounded-lg p-4 min-h-[120px] font-mono text-sm overflow-auto">
+                        {errorOutput.length === 0 ? (
+                          <div className="text-muted-foreground">No errors</div>
+                        ) : (
+                          errorOutput.map((line, index) => (
+                            <div key={index} className="flex gap-4 hover:bg-accent/50">
+                              <span className="text-muted-foreground select-none min-w-[2rem] text-right">{index + 1}</span>
+                              <span className="flex-1 text-destructive">{line}</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </Card>
             )}
