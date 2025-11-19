@@ -1,19 +1,54 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Editor from "@monaco-editor/react";
 import { Play, Home, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
+const challengeTemplates: Record<string, string> = {
+  javascript: `function twoSum(nums, target) {
+  // Write your solution here
+  
+}`,
+  python: `def two_sum(nums, target):
+    # Write your solution here
+    pass`,
+  java: `class Solution {
+    public int[] twoSum(int[] nums, int target) {
+        // Write your solution here
+        
+    }
+}`,
+  cpp: `#include <vector>
+using namespace std;
+
+class Solution {
+public:
+    vector<int> twoSum(vector<int>& nums, int target) {
+        // Write your solution here
+        
+    }
+};`,
+  c: `#include <stdlib.h>
+
+int* twoSum(int* nums, int numsSize, int target, int* returnSize) {
+    // Write your solution here
+    
+}`,
+  typescript: `function twoSum(nums: number[], target: number): number[] {
+  // Write your solution here
+  
+}`,
+};
+
 const CodingChallenge = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [code, setCode] = useState(`function twoSum(nums, target) {
-  // Write your solution here
-  
-}`);
+  const [language, setLanguage] = useState("javascript");
+  const [code, setCode] = useState(challengeTemplates.javascript);
   const [testResults, setTestResults] = useState<string[]>([]);
 
   const challenge = {
@@ -34,12 +69,32 @@ const CodingChallenge = () => {
     ]
   };
 
+  const handleLanguageChange = (newLanguage: string) => {
+    setLanguage(newLanguage);
+    setCode(challengeTemplates[newLanguage]);
+    setTestResults([]);
+  };
+
   const handleRunTests = () => {
+    if (language !== "javascript" && language !== "typescript") {
+      setTestResults([`Note: Automated testing is only supported for JavaScript and TypeScript.
+For ${language.toUpperCase()}, please test your solution manually or use an external compiler/interpreter.`]);
+      toast({
+        title: "Information",
+        description: `${language.toUpperCase()} testing requires external tools`,
+      });
+      return;
+    }
+
     try {
       const results: string[] = [];
       
       // Execute code and get the function
-      eval(code);
+      if (language === "typescript") {
+        eval(code.replace(/: \w+(\[\])?/g, "").replace(/public |private |protected /g, ""));
+      } else {
+        eval(code);
+      }
       const fn = eval("twoSum");
 
       challenge.testCases.forEach((test, index) => {
@@ -115,15 +170,30 @@ const CodingChallenge = () => {
             <Card className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold">Solution</h2>
-                <Button size="sm" onClick={handleRunTests}>
-                  <Play className="w-4 h-4 mr-2" />
-                  Run Tests
-                </Button>
+                <div className="flex gap-2">
+                  <Select value={language} onValueChange={handleLanguageChange}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue placeholder="Language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="javascript">JavaScript</SelectItem>
+                      <SelectItem value="typescript">TypeScript</SelectItem>
+                      <SelectItem value="python">Python</SelectItem>
+                      <SelectItem value="java">Java</SelectItem>
+                      <SelectItem value="cpp">C++</SelectItem>
+                      <SelectItem value="c">C</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button size="sm" onClick={handleRunTests}>
+                    <Play className="w-4 h-4 mr-2" />
+                    Run Tests
+                  </Button>
+                </div>
               </div>
               <div className="border rounded-lg overflow-hidden">
                 <Editor
                   height="300px"
-                  defaultLanguage="javascript"
+                  language={language}
                   theme="vs-dark"
                   value={code}
                   onChange={(value) => setCode(value || "")}

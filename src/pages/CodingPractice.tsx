@@ -1,25 +1,123 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Editor from "@monaco-editor/react";
 import { Play, RotateCcw, Home } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
-const CodingPractice = () => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [code, setCode] = useState(`// Write your code here
+const languageTemplates: Record<string, string> = {
+  javascript: `// Write your code here
 function solution() {
   // Your solution
   return "Hello, World!";
 }
 
 // Test your code
-console.log(solution());`);
+console.log(solution());`,
+  python: `# Write your code here
+def solution():
+    # Your solution
+    return "Hello, World!"
+
+# Test your code
+print(solution())`,
+  java: `public class Solution {
+    public static void main(String[] args) {
+        // Write your code here
+        System.out.println(solution());
+    }
+    
+    public static String solution() {
+        // Your solution
+        return "Hello, World!";
+    }
+}`,
+  cpp: `#include <iostream>
+#include <string>
+using namespace std;
+
+string solution() {
+    // Your solution
+    return "Hello, World!";
+}
+
+int main() {
+    // Test your code
+    cout << solution() << endl;
+    return 0;
+}`,
+  c: `#include <stdio.h>
+#include <string.h>
+
+char* solution() {
+    // Your solution
+    return "Hello, World!";
+}
+
+int main() {
+    // Test your code
+    printf("%s\\n", solution());
+    return 0;
+}`,
+  typescript: `// Write your code here
+function solution(): string {
+  // Your solution
+  return "Hello, World!";
+}
+
+// Test your code
+console.log(solution());`,
+  go: `package main
+
+import "fmt"
+
+func solution() string {
+    // Your solution
+    return "Hello, World!"
+}
+
+func main() {
+    // Test your code
+    fmt.Println(solution())
+}`,
+  rust: `fn solution() -> String {
+    // Your solution
+    String::from("Hello, World!")
+}
+
+fn main() {
+    // Test your code
+    println!("{}", solution());
+}`,
+};
+
+const CodingPractice = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [language, setLanguage] = useState("javascript");
+  const [code, setCode] = useState(languageTemplates.javascript);
   const [output, setOutput] = useState("");
 
+  const handleLanguageChange = (newLanguage: string) => {
+    setLanguage(newLanguage);
+    setCode(languageTemplates[newLanguage]);
+    setOutput("");
+  };
+
   const handleRunCode = () => {
+    if (language !== "javascript" && language !== "typescript") {
+      setOutput(`Note: Direct execution is only supported for JavaScript and TypeScript.
+For ${language.toUpperCase()}, this editor provides syntax highlighting and code writing practice.
+To run ${language.toUpperCase()} code, you would need to use a compiler/interpreter on your local machine or an online judge platform.`);
+      toast({
+        title: "Information",
+        description: `${language.toUpperCase()} execution requires external tools`,
+      });
+      return;
+    }
+
     try {
       // Capture console.log output
       const logs: string[] = [];
@@ -29,7 +127,12 @@ console.log(solution());`);
       };
 
       // Execute the code
-      eval(code);
+      if (language === "typescript") {
+        // For TypeScript, we'll just eval it as JavaScript (simplified)
+        eval(code.replace(/: \w+/g, "").replace(/public |private |protected /g, ""));
+      } else {
+        eval(code);
+      }
 
       // Restore console.log
       console.log = originalLog;
@@ -50,14 +153,7 @@ console.log(solution());`);
   };
 
   const handleReset = () => {
-    setCode(`// Write your code here
-function solution() {
-  // Your solution
-  return "Hello, World!";
-}
-
-// Test your code
-console.log(solution());`);
+    setCode(languageTemplates[language]);
     setOutput("");
   };
 
@@ -77,6 +173,21 @@ console.log(solution());`);
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">Code Editor</h2>
               <div className="flex gap-2">
+                <Select value={language} onValueChange={handleLanguageChange}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="javascript">JavaScript</SelectItem>
+                    <SelectItem value="typescript">TypeScript</SelectItem>
+                    <SelectItem value="python">Python</SelectItem>
+                    <SelectItem value="java">Java</SelectItem>
+                    <SelectItem value="cpp">C++</SelectItem>
+                    <SelectItem value="c">C</SelectItem>
+                    <SelectItem value="go">Go</SelectItem>
+                    <SelectItem value="rust">Rust</SelectItem>
+                  </SelectContent>
+                </Select>
                 <Button variant="outline" size="sm" onClick={handleReset}>
                   <RotateCcw className="w-4 h-4 mr-2" />
                   Reset
@@ -90,7 +201,7 @@ console.log(solution());`);
             <div className="border rounded-lg overflow-hidden">
               <Editor
                 height="500px"
-                defaultLanguage="javascript"
+                language={language}
                 theme="vs-dark"
                 value={code}
                 onChange={(value) => setCode(value || "")}
