@@ -7,6 +7,7 @@ import Editor from "@monaco-editor/react";
 import { Play, Home, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { highlightConsoleOutput } from "@/utils/consoleSyntaxHighlight";
 
 const challengeTemplates: Record<string, string> = {
   javascript: `function twoSum(nums, target) {
@@ -282,7 +283,7 @@ const CodingChallenge = () => {
                           standardOutput.map((line, index) => (
                             <div key={index} className="flex gap-4 hover:bg-accent/50">
                               <span className="text-muted-foreground select-none min-w-[2rem] text-right">{index + 1}</span>
-                              <span className="flex-1">{line}</span>
+                              <span className="flex-1">{highlightConsoleOutput(line)}</span>
                             </div>
                           ))
                         )}
@@ -299,7 +300,7 @@ const CodingChallenge = () => {
                           errorOutput.map((line, index) => (
                             <div key={index} className="flex gap-4 hover:bg-accent/50">
                               <span className="text-muted-foreground select-none min-w-[2rem] text-right">{index + 1}</span>
-                              <span className="flex-1 text-destructive">{line}</span>
+                              <span className="flex-1 text-destructive">{highlightConsoleOutput(line)}</span>
                             </div>
                           ))
                         )}

@@ -6,6 +6,7 @@ import Editor from "@monaco-editor/react";
 import { Play, RotateCcw, Home } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { highlightConsoleOutput } from "@/utils/consoleSyntaxHighlight";
 
 const languageTemplates: Record<string, string> = {
   javascript: `// Write your code here
@@ -247,12 +248,12 @@ const CodingPractice = () => {
                   {standardOutput.length === 0 ? (
                     <div className="text-muted-foreground">Run your code to see the output here...</div>
                   ) : (
-                    standardOutput.map((line, index) => (
-                      <div key={index} className="flex gap-4 hover:bg-accent/50">
-                        <span className="text-muted-foreground select-none min-w-[2rem] text-right">{index + 1}</span>
-                        <span className="flex-1">{line}</span>
-                      </div>
-                    ))
+                          standardOutput.map((line, index) => (
+                            <div key={index} className="flex gap-4 hover:bg-accent/50">
+                              <span className="text-muted-foreground select-none min-w-[2rem] text-right">{index + 1}</span>
+                              <span className="flex-1">{highlightConsoleOutput(line)}</span>
+                            </div>
+                          ))
                   )}
                 </div>
               </div>
@@ -264,12 +265,12 @@ const CodingPractice = () => {
                   {errorOutput.length === 0 ? (
                     <div className="text-muted-foreground">No errors</div>
                   ) : (
-                    errorOutput.map((line, index) => (
-                      <div key={index} className="flex gap-4 hover:bg-accent/50">
-                        <span className="text-muted-foreground select-none min-w-[2rem] text-right">{index + 1}</span>
-                        <span className="flex-1 text-destructive">{line}</span>
-                      </div>
-                    ))
+                          errorOutput.map((line, index) => (
+                            <div key={index} className="flex gap-4 hover:bg-accent/50">
+                              <span className="text-muted-foreground select-none min-w-[2rem] text-right">{index + 1}</span>
+                              <span className="flex-1 text-destructive">{highlightConsoleOutput(line)}</span>
+                            </div>
+                          ))
                   )}
                 </div>
               </div>
