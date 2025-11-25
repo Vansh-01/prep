@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Editor from "@monaco-editor/react";
-import { Play, RotateCcw, Home } from "lucide-react";
+import { Play, RotateCcw, Home, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { highlightConsoleOutput } from "@/utils/consoleSyntaxHighlight";
@@ -239,7 +239,20 @@ const CodingPractice = () => {
           </Card>
 
           <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Console Output</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Console Output</h2>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  setStandardOutput([]);
+                  setErrorOutput([]);
+                }}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Clear Console
+              </Button>
+            </div>
             <div className="grid grid-cols-1 gap-4">
               {/* Standard Output */}
               <div>

@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Editor from "@monaco-editor/react";
-import { Play, Home, CheckCircle } from "lucide-react";
+import { Play, Home, CheckCircle, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { highlightConsoleOutput } from "@/utils/consoleSyntaxHighlight";
@@ -271,7 +271,20 @@ const CodingChallenge = () => {
                 </div>
 
                 <div className="border-t pt-6">
-                  <h3 className="text-lg font-semibold mb-4">Console Output</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold">Console Output</h3>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setStandardOutput([]);
+                        setErrorOutput([]);
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Clear Console
+                    </Button>
+                  </div>
                   <div className="grid grid-cols-1 gap-4">
                     {/* Standard Output */}
                     <div>
