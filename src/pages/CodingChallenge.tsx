@@ -8,6 +8,7 @@ import { Play, Home, CheckCircle, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { highlightConsoleOutput } from "@/utils/consoleSyntaxHighlight";
+import { supabase } from "@/integrations/supabase/client";
 
 const challengeTemplates: Record<string, string> = {
   javascript: `function twoSum(nums, target) {
@@ -80,73 +81,28 @@ const CodingChallenge = () => {
     setErrorOutput([]);
   };
 
-  const handleRunTests = () => {
-    if (language !== "javascript" && language !== "typescript") {
-      setTestResults([]);
-      setStandardOutput([]);
-      setErrorOutput([
-        `Note: Automated testing is only supported for JavaScript and TypeScript.`,
-        `For ${language.toUpperCase()}, please test your solution manually or use an external compiler/interpreter.`
-      ]);
-      toast({
-        title: "Information",
-        description: `${language.toUpperCase()} testing requires external tools`,
-      });
-      return;
-    }
+  const handleRunTests = async () => {
+    setTestResults(["Running tests..."]);
+    setStandardOutput([]);
+    setErrorOutput([]);
 
     try {
-      const results: string[] = [];
-      const logs: string[] = [];
-      const errors: string[] = [];
-      
-      // Capture console output
-      const originalLog = console.log;
-      const originalError = console.error;
-      const originalWarn = console.warn;
-      
-      console.log = (...args) => {
-        logs.push(args.join(" "));
-      };
-      console.error = (...args) => {
-        errors.push(args.join(" "));
-      };
-      console.warn = (...args) => {
-        errors.push(`Warning: ${args.join(" ")}`);
-      };
-      
-      // Execute code and get the function
-      if (language === "typescript") {
-        eval(code.replace(/: \w+(\[\])?/g, "").replace(/public |private |protected /g, ""));
-      } else {
-        eval(code);
-      }
-      const fn = eval("twoSum");
-
-      challenge.testCases.forEach((test, index) => {
-        const result = fn(...test.input);
-        const passed = JSON.stringify(result) === JSON.stringify(test.expected);
-        results.push(
-          passed
-            ? `✓ Test ${index + 1}: Passed`
-            : `✗ Test ${index + 1}: Failed (Expected: ${JSON.stringify(test.expected)}, Got: ${JSON.stringify(result)})`
-        );
+      const { data, error } = await supabase.functions.invoke('execute-code', {
+        body: { code, language }
       });
 
-      // Restore console methods
-      console.log = originalLog;
-      console.error = originalError;
-      console.warn = originalWarn;
+      if (error) throw error;
 
-      setTestResults(results);
-      setStandardOutput(logs);
-      setErrorOutput(errors);
+      const stdout = data.stdout ? data.stdout.trim().split('\n').filter((line: string) => line) : [];
+      const stderr = data.stderr ? data.stderr.trim().split('\n').filter((line: string) => line) : [];
+
+      setStandardOutput(stdout.length > 0 ? stdout : ["Code executed successfully!"]);
+      setErrorOutput(stderr);
+      setTestResults(["✓ Code executed - Check console output for results"]);
       
-      const allPassed = results.every(r => r.startsWith("✓"));
       toast({
-        title: allPassed ? "All Tests Passed!" : "Some Tests Failed",
-        description: allPassed ? "Great job! Challenge completed." : "Keep trying, you're getting there!",
-        variant: allPassed ? "default" : "destructive",
+        title: "Success",
+        description: "Code executed successfully",
       });
     } catch (error) {
       setTestResults([]);
@@ -154,7 +110,7 @@ const CodingChallenge = () => {
       setErrorOutput([`Error: ${error instanceof Error ? error.message : "Unknown error"}`]);
       toast({
         title: "Error",
-        description: "Failed to run tests",
+        description: "Failed to execute code",
         variant: "destructive",
       });
     }

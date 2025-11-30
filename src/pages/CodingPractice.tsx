@@ -7,6 +7,7 @@ import { Play, RotateCcw, Home, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { highlightConsoleOutput } from "@/utils/consoleSyntaxHighlight";
+import { supabase } from "@/integrations/supabase/client";
 
 const languageTemplates: Record<string, string> = {
   javascript: `// Write your code here
@@ -109,54 +110,22 @@ const CodingPractice = () => {
     setErrorOutput([]);
   };
 
-  const handleRunCode = () => {
-    if (language !== "javascript" && language !== "typescript") {
-      setStandardOutput([]);
-      setErrorOutput([
-        `Note: Direct execution is only supported for JavaScript and TypeScript.`,
-        `For ${language.toUpperCase()}, this editor provides syntax highlighting and code writing practice.`,
-        `To run ${language.toUpperCase()} code, you would need to use a compiler/interpreter on your local machine or an online judge platform.`
-      ]);
-      toast({
-        title: "Information",
-        description: `${language.toUpperCase()} execution requires external tools`,
-      });
-      return;
-    }
+  const handleRunCode = async () => {
+    setStandardOutput(["Executing code..."]);
+    setErrorOutput([]);
 
     try {
-      // Capture console.log output
-      const logs: string[] = [];
-      const errors: string[] = [];
-      const originalLog = console.log;
-      const originalError = console.error;
-      const originalWarn = console.warn;
-      
-      console.log = (...args) => {
-        logs.push(args.join(" "));
-      };
-      console.error = (...args) => {
-        errors.push(args.join(" "));
-      };
-      console.warn = (...args) => {
-        errors.push(`Warning: ${args.join(" ")}`);
-      };
+      const { data, error } = await supabase.functions.invoke('execute-code', {
+        body: { code, language }
+      });
 
-      // Execute the code
-      if (language === "typescript") {
-        // For TypeScript, we'll just eval it as JavaScript (simplified)
-        eval(code.replace(/: \w+/g, "").replace(/public |private |protected /g, ""));
-      } else {
-        eval(code);
-      }
+      if (error) throw error;
 
-      // Restore console methods
-      console.log = originalLog;
-      console.error = originalError;
-      console.warn = originalWarn;
+      const stdout = data.stdout ? data.stdout.trim().split('\n').filter((line: string) => line) : [];
+      const stderr = data.stderr ? data.stderr.trim().split('\n').filter((line: string) => line) : [];
 
-      setStandardOutput(logs.length > 0 ? logs : ["Code executed successfully!"]);
-      setErrorOutput(errors);
+      setStandardOutput(stdout.length > 0 ? stdout : ["Code executed successfully!"]);
+      setErrorOutput(stderr);
       
       toast({
         title: "Success",
