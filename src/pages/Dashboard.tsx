@@ -19,10 +19,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { User, LogOut, TrendingUp, Calendar, Award, Clock, Sparkles, Mic, BarChart3, Target } from "lucide-react";
+import { User, LogOut, TrendingUp, Calendar, Award, Clock, Sparkles, Mic, BarChart3, Target, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface InterviewSession {
   id: string;
@@ -45,6 +47,9 @@ export default function Dashboard() {
   const [sessions, setSessions] = useState<InterviewSession[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [showProfilePrompt, setShowProfilePrompt] = useState(false);
+  const [updatingProfile, setUpdatingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({ username: "", avatar_url: "" });
   const [stats, setStats] = useState({
     totalInterviews: 0,
     averageScore: 0,
@@ -80,7 +85,70 @@ export default function Dashboard() {
     
     if (data) {
       setProfile(data);
+      
+      // Check if profile is incomplete
+      const hasSeenProfilePrompt = localStorage.getItem('hasSeenProfilePrompt');
+      if ((!data.username || !data.avatar_url) && !hasSeenProfilePrompt) {
+        setShowProfilePrompt(true);
+        setProfileForm({
+          username: data.username || "",
+          avatar_url: data.avatar_url || ""
+        });
+      }
     }
+  };
+
+  const handleUpdateProfile = async () => {
+    if (!profileForm.username.trim()) {
+      toast({
+        title: "Username Required",
+        description: "Please enter a username",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUpdatingProfile(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) return;
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        username: profileForm.username.trim(),
+        avatar_url: profileForm.avatar_url.trim() || null
+      })
+      .eq("id", session.user.id);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update profile",
+        variant: "destructive",
+      });
+      setUpdatingProfile(false);
+      return;
+    }
+
+    setProfile({
+      username: profileForm.username.trim(),
+      avatar_url: profileForm.avatar_url.trim() || null
+    });
+    
+    localStorage.setItem('hasSeenProfilePrompt', 'true');
+    setShowProfilePrompt(false);
+    setUpdatingProfile(false);
+    
+    toast({
+      title: "Profile Updated",
+      description: "Your profile has been updated successfully",
+    });
+  };
+
+  const handleSkipProfile = () => {
+    localStorage.setItem('hasSeenProfilePrompt', 'true');
+    setShowProfilePrompt(false);
   };
 
   const fetchSessions = async (userId: string) => {
@@ -152,6 +220,63 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Profile Completion Prompt */}
+      <Dialog open={showProfilePrompt} onOpenChange={setShowProfilePrompt}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <AlertCircle className="w-5 h-5 text-primary" />
+              Complete Your Profile
+            </DialogTitle>
+            <DialogDescription>
+              Add your details to personalize your experience
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="username">Username *</Label>
+              <Input
+                id="username"
+                placeholder="Enter your username"
+                value={profileForm.username}
+                onChange={(e) => setProfileForm({ ...profileForm, username: e.target.value })}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="avatar_url">Avatar URL (optional)</Label>
+              <Input
+                id="avatar_url"
+                placeholder="https://example.com/avatar.jpg"
+                value={profileForm.avatar_url}
+                onChange={(e) => setProfileForm({ ...profileForm, avatar_url: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Add a profile picture URL to display your avatar
+              </p>
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button 
+                onClick={handleUpdateProfile} 
+                disabled={updatingProfile}
+                className="flex-1"
+              >
+                {updatingProfile ? "Saving..." : "Save Profile"}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleSkipProfile}
+                disabled={updatingProfile}
+              >
+                Skip for now
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Welcome Dialog */}
       <Dialog open={showWelcome} onOpenChange={setShowWelcome}>
         <DialogContent className="sm:max-w-[600px]">
