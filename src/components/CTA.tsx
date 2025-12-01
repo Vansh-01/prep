@@ -1,8 +1,29 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export const CTA = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const handleGetStarted = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      toast({
+        title: "Sign In Required",
+        description: "Please sign in to start practicing with AI interviews.",
+        variant: "destructive",
+      });
+      navigate("/auth");
+      return;
+    }
+
+    navigate("/interview-mode");
+  };
+
   return (
     <section className="py-20 bg-gradient-hero relative overflow-hidden">
       <div className="absolute top-10 left-10 w-64 h-64 bg-primary/20 rounded-full blur-3xl"></div>
@@ -24,12 +45,15 @@ export const CTA = () => {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/auth">
-              <Button variant="hero" size="xl" className="group">
-                Get Started Free
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
+            <Button 
+              variant="hero" 
+              size="xl" 
+              className="group"
+              onClick={handleGetStarted}
+            >
+              Start Practicing Free
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </Button>
             <Button variant="outline" size="xl" className="border-2">
               View Demo
             </Button>

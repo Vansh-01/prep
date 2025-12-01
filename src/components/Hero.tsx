@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles, User, LogOut } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import heroImage from "@/assets/hero-interview.jpg";
 
 export const Hero = () => {
+  const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [username, setUsername] = useState<string>("");
   const [avatarUrl, setAvatarUrl] = useState<string>("");
@@ -72,6 +73,20 @@ export const Hero = () => {
         description: "You've been successfully signed out.",
       });
     }
+  };
+
+  const handleStartPracticing = async () => {
+    if (!session) {
+      toast({
+        title: "Sign In Required",
+        description: "Please sign in to start practicing with AI interviews.",
+        variant: "destructive",
+      });
+      navigate("/auth");
+      return;
+    }
+
+    navigate("/interview-mode");
   };
 
   return (
@@ -148,12 +163,15 @@ export const Hero = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Link to="/interview-mode">
-                <Button variant="hero" size="xl" className="group">
-                  Start Practicing Free
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
+              <Button 
+                variant="hero" 
+                size="xl" 
+                className="group"
+                onClick={handleStartPracticing}
+              >
+                Start Practicing Free
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </Button>
               <Button variant="outline" size="xl" className="border-2">
                 For Companies
               </Button>
