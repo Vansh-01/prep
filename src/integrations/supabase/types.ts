@@ -51,21 +51,30 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          experience_level: string | null
           id: string
+          job_profile: string | null
+          resume_url: string | null
           updated_at: string
           username: string | null
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          experience_level?: string | null
           id: string
+          job_profile?: string | null
+          resume_url?: string | null
           updated_at?: string
           username?: string | null
         }
         Update: {
           avatar_url?: string | null
           created_at?: string
+          experience_level?: string | null
           id?: string
+          job_profile?: string | null
+          resume_url?: string | null
           updated_at?: string
           username?: string | null
         }
