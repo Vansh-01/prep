@@ -62,6 +62,7 @@ export default function Dashboard() {
   });
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [uploadingResume, setUploadingResume] = useState(false);
+  const [customJobProfile, setCustomJobProfile] = useState("");
   const [stats, setStats] = useState({
     totalInterviews: 0,
     averageScore: 0,
@@ -103,11 +104,18 @@ export default function Dashboard() {
       const isProfileIncomplete = !data.experience_level || !data.job_profile;
       if (isProfileIncomplete && !hasSeenProfilePrompt) {
         setShowProfilePrompt(true);
+        
+        // Handle custom job profile (stored as "other:custom_value")
+        const jobProfile = data.job_profile || "";
+        if (jobProfile.startsWith("other:")) {
+          setCustomJobProfile(jobProfile.replace("other:", ""));
+        }
+        
         setProfileForm({
           username: data.username || "",
           avatar_url: data.avatar_url || "",
           experience_level: data.experience_level || "",
-          job_profile: data.job_profile || ""
+          job_profile: jobProfile
         });
       }
     }
@@ -127,6 +135,16 @@ export default function Dashboard() {
       toast({
         title: "Job Profile Required",
         description: "Please select your target job profile",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate custom job profile if "other" is selected
+    if (profileForm.job_profile === "other" && !customJobProfile.trim()) {
+      toast({
+        title: "Job Profile Required",
+        description: "Please specify your job profile",
         variant: "destructive",
       });
       return;
@@ -168,13 +186,18 @@ export default function Dashboard() {
       setUploadingResume(false);
     }
 
+    // Determine final job profile value
+    const finalJobProfile = profileForm.job_profile === "other" 
+      ? `other:${customJobProfile.trim()}` 
+      : profileForm.job_profile;
+
     const { error } = await supabase
       .from("profiles")
       .update({
         username: profileForm.username.trim() || null,
         avatar_url: profileForm.avatar_url.trim() || null,
         experience_level: profileForm.experience_level,
-        job_profile: profileForm.job_profile,
+        job_profile: finalJobProfile,
         resume_url: resumeUrl
       })
       .eq("id", session.user.id);
@@ -193,7 +216,7 @@ export default function Dashboard() {
       username: profileForm.username.trim() || null,
       avatar_url: profileForm.avatar_url.trim() || null,
       experience_level: profileForm.experience_level,
-      job_profile: profileForm.job_profile,
+      job_profile: finalJobProfile,
       resume_url: resumeUrl
     });
     
@@ -334,8 +357,15 @@ export default function Dashboard() {
             <div className="space-y-2">
               <Label htmlFor="job_profile" className="text-base font-medium">Target Job Profile *</Label>
               <Select
-                value={profileForm.job_profile}
-                onValueChange={(value) => setProfileForm({ ...profileForm, job_profile: value })}
+                value={profileForm.job_profile.startsWith("other:") ? "other" : profileForm.job_profile}
+                onValueChange={(value) => {
+                  if (value === "other") {
+                    setProfileForm({ ...profileForm, job_profile: "other" });
+                  } else {
+                    setProfileForm({ ...profileForm, job_profile: value });
+                    setCustomJobProfile("");
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select your target role" />
@@ -353,6 +383,15 @@ export default function Dashboard() {
                   <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
+              {(profileForm.job_profile === "other" || profileForm.job_profile.startsWith("other:")) && (
+                <Input
+                  placeholder="Please specify your job profile"
+                  value={customJobProfile}
+                  onChange={(e) => setCustomJobProfile(e.target.value)}
+                  className="mt-2"
+                  maxLength={100}
+                />
+              )}
             </div>
 
             {/* Resume Upload */}
