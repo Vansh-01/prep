@@ -19,12 +19,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { User, LogOut, TrendingUp, Calendar, Award, Clock, Sparkles, Mic, BarChart3, Target, AlertCircle } from "lucide-react";
+import { User, LogOut, TrendingUp, Calendar, Award, Clock, Sparkles, Mic, BarChart3, Target, AlertCircle, Upload, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface InterviewSession {
   id: string;
@@ -38,6 +40,9 @@ interface InterviewSession {
 interface Profile {
   username: string | null;
   avatar_url: string | null;
+  experience_level: string | null;
+  job_profile: string | null;
+  resume_url: string | null;
 }
 
 export default function Dashboard() {
@@ -49,7 +54,14 @@ export default function Dashboard() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [showProfilePrompt, setShowProfilePrompt] = useState(false);
   const [updatingProfile, setUpdatingProfile] = useState(false);
-  const [profileForm, setProfileForm] = useState({ username: "", avatar_url: "" });
+  const [profileForm, setProfileForm] = useState({ 
+    username: "", 
+    avatar_url: "", 
+    experience_level: "",
+    job_profile: ""
+  });
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [uploadingResume, setUploadingResume] = useState(false);
   const [stats, setStats] = useState({
     totalInterviews: 0,
     averageScore: 0,
@@ -79,30 +91,42 @@ export default function Dashboard() {
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
       .from("profiles")
-      .select("username, avatar_url")
+      .select("username, avatar_url, experience_level, job_profile, resume_url")
       .eq("id", userId)
       .single();
     
     if (data) {
       setProfile(data);
       
-      // Check if profile is incomplete
+      // Check if profile is incomplete (missing experience level or job profile)
       const hasSeenProfilePrompt = localStorage.getItem('hasSeenProfilePrompt');
-      if ((!data.username || !data.avatar_url) && !hasSeenProfilePrompt) {
+      const isProfileIncomplete = !data.experience_level || !data.job_profile;
+      if (isProfileIncomplete && !hasSeenProfilePrompt) {
         setShowProfilePrompt(true);
         setProfileForm({
           username: data.username || "",
-          avatar_url: data.avatar_url || ""
+          avatar_url: data.avatar_url || "",
+          experience_level: data.experience_level || "",
+          job_profile: data.job_profile || ""
         });
       }
     }
   };
 
   const handleUpdateProfile = async () => {
-    if (!profileForm.username.trim()) {
+    if (!profileForm.experience_level) {
       toast({
-        title: "Username Required",
-        description: "Please enter a username",
+        title: "Experience Level Required",
+        description: "Please select your experience level",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!profileForm.job_profile) {
+      toast({
+        title: "Job Profile Required",
+        description: "Please select your target job profile",
         variant: "destructive",
       });
       return;
@@ -113,11 +137,45 @@ export default function Dashboard() {
     
     if (!session) return;
 
+    let resumeUrl = profile?.resume_url || null;
+
+    // Upload resume if selected
+    if (resumeFile) {
+      setUploadingResume(true);
+      const fileExt = resumeFile.name.split('.').pop();
+      const filePath = `${session.user.id}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('resumes')
+        .upload(filePath, resumeFile);
+
+      if (uploadError) {
+        toast({
+          title: "Upload Error",
+          description: "Failed to upload resume",
+          variant: "destructive",
+        });
+        setUpdatingProfile(false);
+        setUploadingResume(false);
+        return;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('resumes')
+        .getPublicUrl(filePath);
+      
+      resumeUrl = urlData.publicUrl;
+      setUploadingResume(false);
+    }
+
     const { error } = await supabase
       .from("profiles")
       .update({
-        username: profileForm.username.trim(),
-        avatar_url: profileForm.avatar_url.trim() || null
+        username: profileForm.username.trim() || null,
+        avatar_url: profileForm.avatar_url.trim() || null,
+        experience_level: profileForm.experience_level,
+        job_profile: profileForm.job_profile,
+        resume_url: resumeUrl
       })
       .eq("id", session.user.id);
 
@@ -132,18 +190,37 @@ export default function Dashboard() {
     }
 
     setProfile({
-      username: profileForm.username.trim(),
-      avatar_url: profileForm.avatar_url.trim() || null
+      username: profileForm.username.trim() || null,
+      avatar_url: profileForm.avatar_url.trim() || null,
+      experience_level: profileForm.experience_level,
+      job_profile: profileForm.job_profile,
+      resume_url: resumeUrl
     });
     
     localStorage.setItem('hasSeenProfilePrompt', 'true');
     setShowProfilePrompt(false);
     setUpdatingProfile(false);
+    setResumeFile(null);
     
     toast({
       title: "Profile Updated",
       description: "Your profile has been updated successfully",
     });
+  };
+
+  const handleResumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File Too Large",
+          description: "Resume must be less than 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      setResumeFile(file);
+    }
   };
 
   const handleSkipProfile = () => {
@@ -222,20 +299,101 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background">
       {/* Profile Completion Prompt */}
       <Dialog open={showProfilePrompt} onOpenChange={setShowProfilePrompt}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl">
               <AlertCircle className="w-5 h-5 text-primary" />
               Complete Your Profile
             </DialogTitle>
             <DialogDescription>
-              Add your details to personalize your experience
+              Help us personalize your interview practice experience
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 py-4">
+          <div className="space-y-5 py-4">
+            {/* Experience Level */}
+            <div className="space-y-3">
+              <Label className="text-base font-medium">Experience Level *</Label>
+              <RadioGroup
+                value={profileForm.experience_level}
+                onValueChange={(value) => setProfileForm({ ...profileForm, experience_level: value })}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="fresher" id="fresher" />
+                  <Label htmlFor="fresher" className="cursor-pointer">Fresher / Entry Level</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="experienced" id="experienced" />
+                  <Label htmlFor="experienced" className="cursor-pointer">Experienced Professional</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            {/* Job Profile */}
             <div className="space-y-2">
-              <Label htmlFor="username">Username *</Label>
+              <Label htmlFor="job_profile" className="text-base font-medium">Target Job Profile *</Label>
+              <Select
+                value={profileForm.job_profile}
+                onValueChange={(value) => setProfileForm({ ...profileForm, job_profile: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select your target role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="software_engineer">Software Engineer</SelectItem>
+                  <SelectItem value="data_analyst">Data Analyst</SelectItem>
+                  <SelectItem value="data_scientist">Data Scientist</SelectItem>
+                  <SelectItem value="product_manager">Product Manager</SelectItem>
+                  <SelectItem value="hr">Human Resources</SelectItem>
+                  <SelectItem value="marketing">Marketing</SelectItem>
+                  <SelectItem value="sales">Sales</SelectItem>
+                  <SelectItem value="finance">Finance</SelectItem>
+                  <SelectItem value="operations">Operations</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Resume Upload */}
+            <div className="space-y-2">
+              <Label className="text-base font-medium">Upload Resume (optional)</Label>
+              <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary/50 transition-colors">
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={handleResumeChange}
+                  className="hidden"
+                  id="resume-upload"
+                />
+                <label htmlFor="resume-upload" className="cursor-pointer">
+                  {resumeFile ? (
+                    <div className="flex items-center justify-center gap-2 text-primary">
+                      <FileText className="w-5 h-5" />
+                      <span className="font-medium">{resumeFile.name}</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">
+                        Click to upload your resume (PDF, DOC, DOCX)
+                      </p>
+                      <p className="text-xs text-muted-foreground">Max size: 5MB</p>
+                    </div>
+                  )}
+                </label>
+              </div>
+              {profile?.resume_url && !resumeFile && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <FileText className="w-3 h-3" />
+                  Resume already uploaded
+                </p>
+              )}
+            </div>
+
+            {/* Username (optional) */}
+            <div className="space-y-2">
+              <Label htmlFor="username">Username (optional)</Label>
               <Input
                 id="username"
                 placeholder="Enter your username"
@@ -243,32 +401,19 @@ export default function Dashboard() {
                 onChange={(e) => setProfileForm({ ...profileForm, username: e.target.value })}
               />
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="avatar_url">Avatar URL (optional)</Label>
-              <Input
-                id="avatar_url"
-                placeholder="https://example.com/avatar.jpg"
-                value={profileForm.avatar_url}
-                onChange={(e) => setProfileForm({ ...profileForm, avatar_url: e.target.value })}
-              />
-              <p className="text-xs text-muted-foreground">
-                Add a profile picture URL to display your avatar
-              </p>
-            </div>
 
             <div className="flex gap-2 pt-4">
               <Button 
                 onClick={handleUpdateProfile} 
-                disabled={updatingProfile}
+                disabled={updatingProfile || uploadingResume}
                 className="flex-1"
               >
-                {updatingProfile ? "Saving..." : "Save Profile"}
+                {uploadingResume ? "Uploading..." : updatingProfile ? "Saving..." : "Save Profile"}
               </Button>
               <Button 
                 variant="outline" 
                 onClick={handleSkipProfile}
-                disabled={updatingProfile}
+                disabled={updatingProfile || uploadingResume}
               >
                 Skip for now
               </Button>
