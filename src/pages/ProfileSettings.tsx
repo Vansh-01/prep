@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ArrowLeft, Upload, FileText, Save, User } from "lucide-react";
+import { ArrowLeft, Upload, FileText, Save, User, Sparkles, Loader2 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 
 interface Profile {
@@ -33,6 +34,8 @@ export default function ProfileSettings() {
     experience_level: "",
     job_profile: ""
   });
+  const [analyzing, setAnalyzing] = useState(false);
+  const [resumeAnalysis, setResumeAnalysis] = useState<string | null>(null);
 
   useEffect(() => {
     checkAuthAndFetchProfile();
@@ -205,6 +208,51 @@ export default function ProfileSettings() {
     });
   };
 
+  const handleAnalyzeResume = async () => {
+    if (!profile?.resume_url) {
+      toast({
+        title: "No Resume",
+        description: "Please upload a resume first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAnalyzing(true);
+    setResumeAnalysis(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-resume', {
+        body: {
+          resumeUrl: profile.resume_url,
+          jobProfile: formData.job_profile,
+          experienceLevel: formData.experience_level
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      setResumeAnalysis(data.analysis);
+      toast({
+        title: "Analysis Complete",
+        description: "Your resume has been analyzed successfully",
+      });
+    } catch (error) {
+      console.error("Error analyzing resume:", error);
+      toast({
+        title: "Analysis Failed",
+        description: error instanceof Error ? error.message : "Failed to analyze resume",
+        variant: "destructive",
+      });
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -362,12 +410,47 @@ export default function ProfileSettings() {
                 </label>
               </div>
               {profile?.resume_url && !resumeFile && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <FileText className="w-3 h-3" />
-                  Resume already uploaded
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <FileText className="w-3 h-3" />
+                    Resume already uploaded
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAnalyzeResume}
+                    disabled={analyzing}
+                    className="gap-2"
+                  >
+                    {analyzing ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-4 h-4" />
+                    )}
+                    {analyzing ? "Analyzing..." : "AI Analysis"}
+                  </Button>
+                </div>
               )}
             </div>
+
+            {/* Resume Analysis Results */}
+            {resumeAnalysis && (
+              <Card className="bg-primary/5 border-primary/20">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    AI Resume Analysis
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[400px] pr-4">
+                    <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+                      {resumeAnalysis}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Save Button */}
             <div className="pt-4">
