@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquare, Code, Trophy } from "lucide-react";
+import { MessageSquare, Code, Trophy, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -51,6 +51,13 @@ const InterviewMode = () => {
       description: "Take on coding challenges and test your skills",
       path: "/coding-challenge",
       action: () => checkAuthAndNavigate("/coding-challenge")
+    },
+    {
+      icon: FileText,
+      title: "Resume Analyzer",
+      description: "Get AI-powered feedback on your resume to stand out",
+      path: "/profile-settings",
+      action: () => checkAuthAndNavigate("/profile-settings")
     }
   ];
 
@@ -67,7 +74,7 @@ const InterviewMode = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {modes.map((mode, index) => (
               <Card 
                 key={index}
