@@ -41,32 +41,15 @@ serve(async (req) => {
       ? 'entry-level/fresher' 
       : 'experienced professional';
 
-    const systemPrompt = `You are an expert career coach and resume reviewer with 15+ years of experience in HR and recruitment. Your task is to analyze resumes and provide constructive, actionable feedback.
+    const systemPrompt = `You are an expert career coach and resume reviewer with 15+ years of experience in HR and recruitment. Analyze resumes and provide scores with actionable feedback.`;
 
-When analyzing a resume, evaluate:
-1. **Overall Structure & Format** - Is it well-organized, easy to read, and professionally formatted?
-2. **Content Quality** - Are achievements quantified? Are descriptions clear and impactful?
-3. **Keywords & ATS Optimization** - Does it contain relevant industry keywords?
-4. **Skills Alignment** - How well do the skills match the target role?
-5. **Experience Relevance** - Is the experience relevant and well-presented?
-6. **Improvements Needed** - What specific changes would strengthen the resume?
-
-Provide your analysis in a structured format with clear sections and actionable recommendations.`;
-
-    const userPrompt = `Please analyze this resume for a ${experienceLevelText} candidate targeting a ${formattedJobProfile} position.
+    const userPrompt = `Analyze this resume for a ${experienceLevelText} candidate targeting a ${formattedJobProfile} position.
 
 Resume URL: ${resumeUrl}
 
-Since I cannot directly view the document, please provide:
-1. A general framework for what makes a strong ${formattedJobProfile} resume for ${experienceLevelText} candidates
-2. Key skills and keywords to include
-3. Common mistakes to avoid
-4. Recommended structure and sections
-5. Tips for standing out to recruiters in this field
+Provide a comprehensive analysis with scores (0-100) for each category and detailed feedback.`;
 
-Please provide comprehensive, actionable advice tailored to this specific role and experience level.`;
-
-    console.log("Calling Lovable AI gateway...");
+    console.log("Calling Lovable AI gateway with tool calling...");
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -80,6 +63,53 @@ Please provide comprehensive, actionable advice tailored to this specific role a
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
         ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "analyze_resume",
+              description: "Provide resume analysis with scores and feedback",
+              parameters: {
+                type: "object",
+                properties: {
+                  overallScore: {
+                    type: "number",
+                    description: "Overall resume score from 0-100"
+                  },
+                  categories: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        name: { type: "string", description: "Category name" },
+                        score: { type: "number", description: "Score from 0-100" },
+                        feedback: { type: "string", description: "Brief feedback for this category" }
+                      },
+                      required: ["name", "score", "feedback"]
+                    },
+                    description: "Scoring breakdown by category: Formatting, Keywords & ATS, Experience, Skills Match, Impact & Achievements"
+                  },
+                  strengths: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "List of 3-5 key strengths"
+                  },
+                  improvements: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "List of 3-5 specific improvements needed"
+                  },
+                  summary: {
+                    type: "string",
+                    description: "Overall summary and recommendations (2-3 sentences)"
+                  }
+                },
+                required: ["overallScore", "categories", "strengths", "improvements", "summary"]
+              }
+            }
+          }
+        ],
+        tool_choice: { type: "function", function: { name: "analyze_resume" } }
       }),
     });
 
@@ -107,12 +137,23 @@ Please provide comprehensive, actionable advice tailored to this specific role a
     }
 
     const data = await response.json();
-    const analysis = data.choices?.[0]?.message?.content;
+    console.log("AI response:", JSON.stringify(data, null, 2));
 
+    // Extract tool call result
+    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall || toolCall.function.name !== "analyze_resume") {
+      console.error("No valid tool call in response");
+      return new Response(
+        JSON.stringify({ error: "Failed to get structured analysis" }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const analysisData = JSON.parse(toolCall.function.arguments);
     console.log("Resume analysis completed successfully");
 
     return new Response(
-      JSON.stringify({ analysis }),
+      JSON.stringify({ analysis: analysisData }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
