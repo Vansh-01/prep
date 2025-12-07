@@ -12,9 +12,9 @@ serve(async (req) => {
   }
 
   try {
-    const { resumeUrl, jobProfile, experienceLevel } = await req.json();
+    const { resumeUrl, jobProfile, experienceLevel, jobDescription } = await req.json();
     
-    console.log("Analyzing resume:", { resumeUrl, jobProfile, experienceLevel });
+    console.log("Analyzing resume:", { resumeUrl, jobProfile, experienceLevel, hasJobDescription: !!jobDescription });
 
     if (!resumeUrl) {
       return new Response(
@@ -43,16 +43,20 @@ serve(async (req) => {
 
     const systemPrompt = `You are an expert career coach, ATS specialist, and resume reviewer with 15+ years of experience in HR and recruitment across multiple industries. Analyze resumes and provide comprehensive scores with actionable, industry-specific feedback.`;
 
+    const jobDescriptionSection = jobDescription 
+      ? `\n\nJOB DESCRIPTION TO MATCH AGAINST:\n${jobDescription}\n\nIMPORTANT: Compare the resume against this specific job description. Analyze how well the candidate's skills, experience, and qualifications match the job requirements. Identify missing requirements and provide specific suggestions to tailor the resume for this position.`
+      : '';
+
     const userPrompt = `Analyze this resume for a ${experienceLevelText} candidate targeting a ${formattedJobProfile} position.
 
-Resume URL: ${resumeUrl}
+Resume URL: ${resumeUrl}${jobDescriptionSection}
 
 Provide a comprehensive analysis including:
 1. Overall score (0-100) with category breakdowns
 2. ATS compatibility analysis with keyword optimization suggestions
 3. Industry-specific feedback tailored to ${formattedJobProfile} roles
 4. Specific keywords the resume is missing for the target role
-5. Actionable improvements with examples`;
+5. Actionable improvements with examples${jobDescription ? '\n6. Job description match analysis with specific requirements comparison' : ''}`;
 
     console.log("Calling Lovable AI gateway with tool calling...");
 
@@ -149,6 +153,38 @@ Provide a comprehensive analysis including:
                       }
                     },
                     required: ["industry", "relevanceScore", "keySkillsForIndustry", "industryTrends", "competitiveAdvantages", "gapsToAddress"]
+                  },
+                  jobMatch: {
+                    type: "object",
+                    properties: {
+                      matchScore: { type: "number", description: "How well the resume matches the job description (0-100)" },
+                      matchedRequirements: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "Job requirements that the candidate meets"
+                      },
+                      missingRequirements: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "Job requirements the candidate is missing or weak on"
+                      },
+                      keywordMatches: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "Important keywords from job description found in resume"
+                      },
+                      keywordGaps: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "Important keywords from job description missing in resume"
+                      },
+                      tailoringTips: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "Specific suggestions to tailor the resume for this job"
+                      }
+                    },
+                    required: ["matchScore", "matchedRequirements", "missingRequirements", "keywordMatches", "keywordGaps", "tailoringTips"]
                   },
                   strengths: {
                     type: "array",

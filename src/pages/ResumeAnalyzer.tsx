@@ -6,10 +6,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { Upload, FileText, Loader2, Sparkles, CheckCircle, ArrowLeft, X, TrendingUp, AlertCircle, Shield, Target, Zap, Tag } from "lucide-react";
+import { Upload, FileText, Loader2, Sparkles, CheckCircle, ArrowLeft, X, TrendingUp, AlertCircle, Shield, Target, Zap, Tag, Briefcase, ClipboardList } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface ATSAnalysis {
   score: number;
@@ -29,6 +31,15 @@ interface IndustryInsights {
   gapsToAddress: string[];
 }
 
+interface JobMatch {
+  matchScore: number;
+  matchedRequirements: string[];
+  missingRequirements: string[];
+  keywordMatches: string[];
+  keywordGaps: string[];
+  tailoringTips: string[];
+}
+
 interface ResumeAnalysis {
   overallScore: number;
   categories: {
@@ -38,6 +49,7 @@ interface ResumeAnalysis {
   }[];
   atsAnalysis: ATSAnalysis;
   industryInsights: IndustryInsights;
+  jobMatch?: JobMatch;
   strengths: string[];
   improvements: string[];
   summary: string;
@@ -51,6 +63,8 @@ const ResumeAnalyzer = () => {
   const [analysis, setAnalysis] = useState<ResumeAnalysis | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [profile, setProfile] = useState<{ job_profile: string | null; experience_level: string | null } | null>(null);
+  const [jobDescription, setJobDescription] = useState("");
+  const [showJobDescription, setShowJobDescription] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -210,7 +224,8 @@ const ResumeAnalyzer = () => {
         body: {
           resumeUrl: urlToAnalyze,
           jobProfile: profile?.job_profile || 'General',
-          experienceLevel: profile?.experience_level || 'fresher'
+          experienceLevel: profile?.experience_level || 'fresher',
+          jobDescription: jobDescription.trim() || undefined
         }
       });
 
@@ -402,6 +417,56 @@ const ResumeAnalyzer = () => {
               </CardContent>
             </Card>
 
+            {/* Job Description Section */}
+            <Card className="h-fit lg:col-span-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Briefcase className="w-5 h-5" />
+                  Job Description (Optional)
+                </CardTitle>
+                <CardDescription>
+                  Paste a job description for tailored matching analysis
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Collapsible open={showJobDescription} onOpenChange={setShowJobDescription}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between">
+                      <span className="flex items-center gap-2">
+                        <ClipboardList className="w-4 h-4" />
+                        {jobDescription ? "Edit Job Description" : "Add Job Description"}
+                      </span>
+                      {jobDescription && (
+                        <Badge variant="secondary" className="ml-2">Added</Badge>
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-4 space-y-3">
+                    <Textarea
+                      placeholder="Paste the job description here to get tailored recommendations..."
+                      value={jobDescription}
+                      onChange={(e) => setJobDescription(e.target.value)}
+                      className="min-h-[150px] resize-y"
+                      maxLength={5000}
+                    />
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{jobDescription.length}/5000 characters</span>
+                      {jobDescription && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => setJobDescription("")}
+                        >
+                          <X className="w-3 h-3 mr-1" />
+                          Clear
+                        </Button>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </CardContent>
+            </Card>
+
             {/* Analysis Section */}
             <div className="lg:col-span-3 space-y-6">
               {analyzing ? (
@@ -429,19 +494,25 @@ const ResumeAnalyzer = () => {
 
                   {/* Tabbed Analysis Sections */}
                   <Tabs defaultValue="breakdown" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3">
+                    <TabsList className={`grid w-full ${analysis.jobMatch ? 'grid-cols-4' : 'grid-cols-3'}`}>
                       <TabsTrigger value="breakdown" className="flex items-center gap-1.5">
                         <TrendingUp className="w-4 h-4" />
                         <span className="hidden sm:inline">Breakdown</span>
                       </TabsTrigger>
                       <TabsTrigger value="ats" className="flex items-center gap-1.5">
                         <Shield className="w-4 h-4" />
-                        <span className="hidden sm:inline">ATS Check</span>
+                        <span className="hidden sm:inline">ATS</span>
                       </TabsTrigger>
                       <TabsTrigger value="industry" className="flex items-center gap-1.5">
                         <Target className="w-4 h-4" />
                         <span className="hidden sm:inline">Industry</span>
                       </TabsTrigger>
+                      {analysis.jobMatch && (
+                        <TabsTrigger value="jobmatch" className="flex items-center gap-1.5">
+                          <Briefcase className="w-4 h-4" />
+                          <span className="hidden sm:inline">Job Match</span>
+                        </TabsTrigger>
+                      )}
                     </TabsList>
 
                     {/* Score Breakdown Tab */}
@@ -711,6 +782,126 @@ const ResumeAnalyzer = () => {
                         </CardContent>
                       </Card>
                     </TabsContent>
+
+                    {/* Job Match Tab */}
+                    {analysis.jobMatch && (
+                      <TabsContent value="jobmatch" className="space-y-4 mt-4">
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Briefcase className="w-5 h-5" />
+                                Job Description Match
+                              </div>
+                              <span className={`text-2xl font-bold ${getScoreColor(analysis.jobMatch.matchScore)}`}>
+                                {analysis.jobMatch.matchScore}%
+                              </span>
+                            </CardTitle>
+                            <CardDescription>
+                              How well your resume matches the job requirements
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent className="space-y-6">
+                            <div className="relative">
+                              <Progress value={analysis.jobMatch.matchScore} className="h-3" />
+                              <div 
+                                className={`absolute top-0 left-0 h-3 rounded-full transition-all ${getProgressColor(analysis.jobMatch.matchScore)}`}
+                                style={{ width: `${analysis.jobMatch.matchScore}%` }}
+                              />
+                            </div>
+
+                            {/* Keywords Match */}
+                            <div className="grid gap-4 sm:grid-cols-2">
+                              <div className="space-y-3">
+                                <h4 className="font-medium flex items-center gap-2 text-green-600">
+                                  <CheckCircle className="w-4 h-4" />
+                                  Matched Keywords
+                                </h4>
+                                <div className="flex flex-wrap gap-2">
+                                  {analysis.jobMatch.keywordMatches.map((keyword, index) => (
+                                    <Badge key={index} variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                      <Tag className="w-3 h-3 mr-1" />
+                                      {keyword}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="space-y-3">
+                                <h4 className="font-medium flex items-center gap-2 text-red-600">
+                                  <AlertCircle className="w-4 h-4" />
+                                  Missing Keywords
+                                </h4>
+                                <div className="flex flex-wrap gap-2">
+                                  {analysis.jobMatch.keywordGaps.map((keyword, index) => (
+                                    <Badge key={index} variant="secondary" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                      <Tag className="w-3 h-3 mr-1" />
+                                      {keyword}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Requirements Match */}
+                            <div className="grid gap-4 sm:grid-cols-2">
+                              <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
+                                <CardHeader className="pb-2">
+                                  <CardTitle className="text-base flex items-center gap-2 text-green-700 dark:text-green-400">
+                                    <CheckCircle className="w-4 h-4" />
+                                    Met Requirements
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <ul className="space-y-2">
+                                    {analysis.jobMatch.matchedRequirements.map((req, index) => (
+                                      <li key={index} className="text-sm flex items-start gap-2">
+                                        <CheckCircle className="w-4 h-4 mt-0.5 text-green-500 shrink-0" />
+                                        {req}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </CardContent>
+                              </Card>
+
+                              <Card className="bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800">
+                                <CardHeader className="pb-2">
+                                  <CardTitle className="text-base flex items-center gap-2 text-red-700 dark:text-red-400">
+                                    <AlertCircle className="w-4 h-4" />
+                                    Missing Requirements
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <ul className="space-y-2">
+                                    {analysis.jobMatch.missingRequirements.map((req, index) => (
+                                      <li key={index} className="text-sm flex items-start gap-2">
+                                        <X className="w-4 h-4 mt-0.5 text-red-500 shrink-0" />
+                                        {req}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </CardContent>
+                              </Card>
+                            </div>
+
+                            {/* Tailoring Tips */}
+                            <div className="space-y-3">
+                              <h4 className="font-medium flex items-center gap-2">
+                                <Sparkles className="w-4 h-4 text-primary" />
+                                Resume Tailoring Tips
+                              </h4>
+                              <ul className="space-y-2">
+                                {analysis.jobMatch.tailoringTips.map((tip, index) => (
+                                  <li key={index} className="flex items-start gap-2 text-sm p-2 bg-muted rounded-lg">
+                                    <Zap className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+                                    {tip}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </TabsContent>
+                    )}
                   </Tabs>
                 </>
               ) : (
