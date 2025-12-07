@@ -6,7 +6,28 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { Upload, FileText, Loader2, Sparkles, CheckCircle, ArrowLeft, X, TrendingUp, AlertCircle } from "lucide-react";
+import { Upload, FileText, Loader2, Sparkles, CheckCircle, ArrowLeft, X, TrendingUp, AlertCircle, Shield, Target, Zap, Tag } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+interface ATSAnalysis {
+  score: number;
+  status: "excellent" | "good" | "needs_work" | "poor";
+  parsingIssues: string[];
+  missingKeywords: string[];
+  foundKeywords: string[];
+  recommendations: string[];
+}
+
+interface IndustryInsights {
+  industry: string;
+  relevanceScore: number;
+  keySkillsForIndustry: string[];
+  industryTrends: string[];
+  competitiveAdvantages: string[];
+  gapsToAddress: string[];
+}
 
 interface ResumeAnalysis {
   overallScore: number;
@@ -15,6 +36,8 @@ interface ResumeAnalysis {
     score: number;
     feedback: string;
   }[];
+  atsAnalysis: ATSAnalysis;
+  industryInsights: IndustryInsights;
   strengths: string[];
   improvements: string[];
   summary: string;
@@ -227,6 +250,24 @@ const ResumeAnalyzer = () => {
     return "bg-red-500";
   };
 
+  const getATSStatusColor = (status: ATSAnalysis["status"]) => {
+    switch (status) {
+      case "excellent": return "bg-green-500";
+      case "good": return "bg-yellow-500";
+      case "needs_work": return "bg-orange-500";
+      case "poor": return "bg-red-500";
+    }
+  };
+
+  const getATSStatusLabel = (status: ATSAnalysis["status"]) => {
+    switch (status) {
+      case "excellent": return "ATS Ready";
+      case "good": return "Good Compatibility";
+      case "needs_work": return "Needs Optimization";
+      case "poor": return "Poor Compatibility";
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container px-4 sm:px-6 lg:px-8 py-8">
@@ -386,76 +427,291 @@ const ResumeAnalyzer = () => {
                     </CardHeader>
                   </Card>
 
-                  {/* Category Breakdown */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5" />
-                        Score Breakdown
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {analysis.categories.map((category, index) => (
-                        <div key={index} className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium">{category.name}</span>
-                            <span className={`font-bold ${getScoreColor(category.score)}`}>
-                              {category.score}/100
-                            </span>
+                  {/* Tabbed Analysis Sections */}
+                  <Tabs defaultValue="breakdown" className="w-full">
+                    <TabsList className="grid w-full grid-cols-3">
+                      <TabsTrigger value="breakdown" className="flex items-center gap-1.5">
+                        <TrendingUp className="w-4 h-4" />
+                        <span className="hidden sm:inline">Breakdown</span>
+                      </TabsTrigger>
+                      <TabsTrigger value="ats" className="flex items-center gap-1.5">
+                        <Shield className="w-4 h-4" />
+                        <span className="hidden sm:inline">ATS Check</span>
+                      </TabsTrigger>
+                      <TabsTrigger value="industry" className="flex items-center gap-1.5">
+                        <Target className="w-4 h-4" />
+                        <span className="hidden sm:inline">Industry</span>
+                      </TabsTrigger>
+                    </TabsList>
+
+                    {/* Score Breakdown Tab */}
+                    <TabsContent value="breakdown" className="space-y-4 mt-4">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <TrendingUp className="w-5 h-5" />
+                            Score Breakdown
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          {analysis.categories.map((category, index) => (
+                            <div key={index} className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium">{category.name}</span>
+                                <span className={`font-bold ${getScoreColor(category.score)}`}>
+                                  {category.score}/100
+                                </span>
+                              </div>
+                              <div className="relative">
+                                <Progress value={category.score} className="h-2" />
+                                <div 
+                                  className={`absolute top-0 left-0 h-2 rounded-full transition-all ${getProgressColor(category.score)}`}
+                                  style={{ width: `${category.score}%` }}
+                                />
+                              </div>
+                              <p className="text-sm text-muted-foreground">{category.feedback}</p>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+
+                      {/* Strengths & Improvements */}
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <Card>
+                          <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center gap-2 text-green-600">
+                              <CheckCircle className="w-5 h-5" />
+                              Strengths
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <ul className="space-y-2">
+                              {analysis.strengths.map((strength, index) => (
+                                <li key={index} className="flex items-start gap-2 text-sm">
+                                  <CheckCircle className="w-4 h-4 mt-0.5 text-green-500 shrink-0" />
+                                  {strength}
+                                </li>
+                              ))}
+                            </ul>
+                          </CardContent>
+                        </Card>
+
+                        <Card>
+                          <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center gap-2 text-amber-600">
+                              <AlertCircle className="w-5 h-5" />
+                              Improvements
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <ul className="space-y-2">
+                              {analysis.improvements.map((improvement, index) => (
+                                <li key={index} className="flex items-start gap-2 text-sm">
+                                  <AlertCircle className="w-4 h-4 mt-0.5 text-amber-500 shrink-0" />
+                                  {improvement}
+                                </li>
+                              ))}
+                            </ul>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </TabsContent>
+
+                    {/* ATS Check Tab */}
+                    <TabsContent value="ats" className="space-y-4 mt-4">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Shield className="w-5 h-5" />
+                              ATS Compatibility
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge className={`${getATSStatusColor(analysis.atsAnalysis.status)} text-white`}>
+                                {getATSStatusLabel(analysis.atsAnalysis.status)}
+                              </Badge>
+                              <span className={`text-2xl font-bold ${getScoreColor(analysis.atsAnalysis.score)}`}>
+                                {analysis.atsAnalysis.score}%
+                              </span>
+                            </div>
+                          </CardTitle>
+                          <CardDescription>
+                            How well your resume will perform with Applicant Tracking Systems
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                          {/* Keywords Section */}
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="space-y-3">
+                              <h4 className="font-medium flex items-center gap-2 text-green-600">
+                                <CheckCircle className="w-4 h-4" />
+                                Keywords Found
+                              </h4>
+                              <div className="flex flex-wrap gap-2">
+                                {analysis.atsAnalysis.foundKeywords.map((keyword, index) => (
+                                  <Badge key={index} variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                    <Tag className="w-3 h-3 mr-1" />
+                                    {keyword}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="space-y-3">
+                              <h4 className="font-medium flex items-center gap-2 text-red-600">
+                                <AlertCircle className="w-4 h-4" />
+                                Missing Keywords
+                              </h4>
+                              <div className="flex flex-wrap gap-2">
+                                {analysis.atsAnalysis.missingKeywords.map((keyword, index) => (
+                                  <Badge key={index} variant="secondary" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                    <Tag className="w-3 h-3 mr-1" />
+                                    {keyword}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
                           </div>
+
+                          {/* Parsing Issues */}
+                          {analysis.atsAnalysis.parsingIssues.length > 0 && (
+                            <div className="space-y-3">
+                              <h4 className="font-medium flex items-center gap-2 text-amber-600">
+                                <AlertCircle className="w-4 h-4" />
+                                Potential Parsing Issues
+                              </h4>
+                              <ul className="space-y-2">
+                                {analysis.atsAnalysis.parsingIssues.map((issue, index) => (
+                                  <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
+                                    <X className="w-4 h-4 mt-0.5 text-amber-500 shrink-0" />
+                                    {issue}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Recommendations */}
+                          <div className="space-y-3">
+                            <h4 className="font-medium flex items-center gap-2">
+                              <Zap className="w-4 h-4 text-primary" />
+                              ATS Optimization Tips
+                            </h4>
+                            <ul className="space-y-2">
+                              {analysis.atsAnalysis.recommendations.map((rec, index) => (
+                                <li key={index} className="flex items-start gap-2 text-sm">
+                                  <Sparkles className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+                                  {rec}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+
+                    {/* Industry Insights Tab */}
+                    <TabsContent value="industry" className="space-y-4 mt-4">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Target className="w-5 h-5" />
+                              {analysis.industryInsights.industry} Insights
+                            </div>
+                            <span className={`text-2xl font-bold ${getScoreColor(analysis.industryInsights.relevanceScore)}`}>
+                              {analysis.industryInsights.relevanceScore}%
+                            </span>
+                          </CardTitle>
+                          <CardDescription>
+                            Industry-specific analysis for your target role
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
                           <div className="relative">
-                            <Progress value={category.score} className="h-2" />
+                            <Progress value={analysis.industryInsights.relevanceScore} className="h-3" />
                             <div 
-                              className={`absolute top-0 left-0 h-2 rounded-full transition-all ${getProgressColor(category.score)}`}
-                              style={{ width: `${category.score}%` }}
+                              className={`absolute top-0 left-0 h-3 rounded-full transition-all ${getProgressColor(analysis.industryInsights.relevanceScore)}`}
+                              style={{ width: `${analysis.industryInsights.relevanceScore}%` }}
                             />
                           </div>
-                          <p className="text-sm text-muted-foreground">{category.feedback}</p>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
 
-                  {/* Strengths & Improvements */}
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="flex items-center gap-2 text-green-600">
-                          <CheckCircle className="w-5 h-5" />
-                          Strengths
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <ul className="space-y-2">
-                          {analysis.strengths.map((strength, index) => (
-                            <li key={index} className="flex items-start gap-2 text-sm">
-                              <CheckCircle className="w-4 h-4 mt-0.5 text-green-500 shrink-0" />
-                              {strength}
-                            </li>
-                          ))}
-                        </ul>
-                      </CardContent>
-                    </Card>
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            {/* Key Skills */}
+                            <div className="space-y-3">
+                              <h4 className="font-medium flex items-center gap-2">
+                                <Zap className="w-4 h-4 text-primary" />
+                                Key Skills for This Industry
+                              </h4>
+                              <div className="flex flex-wrap gap-2">
+                                {analysis.industryInsights.keySkillsForIndustry.map((skill, index) => (
+                                  <Badge key={index} variant="outline" className="border-primary/50">
+                                    {skill}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
 
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="flex items-center gap-2 text-amber-600">
-                          <AlertCircle className="w-5 h-5" />
-                          Improvements
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <ul className="space-y-2">
-                          {analysis.improvements.map((improvement, index) => (
-                            <li key={index} className="flex items-start gap-2 text-sm">
-                              <AlertCircle className="w-4 h-4 mt-0.5 text-amber-500 shrink-0" />
-                              {improvement}
-                            </li>
-                          ))}
-                        </ul>
-                      </CardContent>
-                    </Card>
-                  </div>
+                            {/* Industry Trends */}
+                            <div className="space-y-3">
+                              <h4 className="font-medium flex items-center gap-2">
+                                <TrendingUp className="w-4 h-4 text-blue-500" />
+                                Current Industry Trends
+                              </h4>
+                              <ul className="space-y-1">
+                                {analysis.industryInsights.industryTrends.map((trend, index) => (
+                                  <li key={index} className="text-sm text-muted-foreground">
+                                    • {trend}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            {/* Competitive Advantages */}
+                            <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
+                              <CardHeader className="pb-2">
+                                <CardTitle className="text-base flex items-center gap-2 text-green-700 dark:text-green-400">
+                                  <CheckCircle className="w-4 h-4" />
+                                  Your Competitive Advantages
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <ul className="space-y-2">
+                                  {analysis.industryInsights.competitiveAdvantages.map((adv, index) => (
+                                    <li key={index} className="text-sm flex items-start gap-2">
+                                      <CheckCircle className="w-4 h-4 mt-0.5 text-green-500 shrink-0" />
+                                      {adv}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </CardContent>
+                            </Card>
+
+                            {/* Gaps to Address */}
+                            <Card className="bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
+                              <CardHeader className="pb-2">
+                                <CardTitle className="text-base flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                                  <AlertCircle className="w-4 h-4" />
+                                  Gaps to Address
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <ul className="space-y-2">
+                                  {analysis.industryInsights.gapsToAddress.map((gap, index) => (
+                                    <li key={index} className="text-sm flex items-start gap-2">
+                                      <AlertCircle className="w-4 h-4 mt-0.5 text-amber-500 shrink-0" />
+                                      {gap}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </CardContent>
+                            </Card>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+                  </Tabs>
                 </>
               ) : (
                 <Card>

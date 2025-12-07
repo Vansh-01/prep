@@ -41,13 +41,18 @@ serve(async (req) => {
       ? 'entry-level/fresher' 
       : 'experienced professional';
 
-    const systemPrompt = `You are an expert career coach and resume reviewer with 15+ years of experience in HR and recruitment. Analyze resumes and provide scores with actionable feedback.`;
+    const systemPrompt = `You are an expert career coach, ATS specialist, and resume reviewer with 15+ years of experience in HR and recruitment across multiple industries. Analyze resumes and provide comprehensive scores with actionable, industry-specific feedback.`;
 
     const userPrompt = `Analyze this resume for a ${experienceLevelText} candidate targeting a ${formattedJobProfile} position.
 
 Resume URL: ${resumeUrl}
 
-Provide a comprehensive analysis with scores (0-100) for each category and detailed feedback.`;
+Provide a comprehensive analysis including:
+1. Overall score (0-100) with category breakdowns
+2. ATS compatibility analysis with keyword optimization suggestions
+3. Industry-specific feedback tailored to ${formattedJobProfile} roles
+4. Specific keywords the resume is missing for the target role
+5. Actionable improvements with examples`;
 
     console.log("Calling Lovable AI gateway with tool calling...");
 
@@ -89,6 +94,62 @@ Provide a comprehensive analysis with scores (0-100) for each category and detai
                     },
                     description: "Scoring breakdown by category: Formatting, Keywords & ATS, Experience, Skills Match, Impact & Achievements"
                   },
+                  atsAnalysis: {
+                    type: "object",
+                    properties: {
+                      score: { type: "number", description: "ATS compatibility score from 0-100" },
+                      status: { type: "string", enum: ["excellent", "good", "needs_work", "poor"], description: "Overall ATS status" },
+                      parsingIssues: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "List of potential ATS parsing issues like complex formatting, tables, graphics"
+                      },
+                      missingKeywords: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "Important keywords missing for the target role"
+                      },
+                      foundKeywords: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "Relevant keywords already present in the resume"
+                      },
+                      recommendations: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "Specific ATS optimization recommendations"
+                      }
+                    },
+                    required: ["score", "status", "parsingIssues", "missingKeywords", "foundKeywords", "recommendations"]
+                  },
+                  industryInsights: {
+                    type: "object",
+                    properties: {
+                      industry: { type: "string", description: "Target industry name" },
+                      relevanceScore: { type: "number", description: "How well the resume fits the target industry (0-100)" },
+                      keySkillsForIndustry: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "Key skills valued in this industry that should be highlighted"
+                      },
+                      industryTrends: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "Current industry trends the candidate should address"
+                      },
+                      competitiveAdvantages: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "What makes this candidate stand out for this industry"
+                      },
+                      gapsToAddress: {
+                        type: "array",
+                        items: { type: "string" },
+                        description: "Industry-specific gaps the candidate should work on"
+                      }
+                    },
+                    required: ["industry", "relevanceScore", "keySkillsForIndustry", "industryTrends", "competitiveAdvantages", "gapsToAddress"]
+                  },
                   strengths: {
                     type: "array",
                     items: { type: "string" },
@@ -104,7 +165,7 @@ Provide a comprehensive analysis with scores (0-100) for each category and detai
                     description: "Overall summary and recommendations (2-3 sentences)"
                   }
                 },
-                required: ["overallScore", "categories", "strengths", "improvements", "summary"]
+                required: ["overallScore", "categories", "atsAnalysis", "industryInsights", "strengths", "improvements", "summary"]
               }
             }
           }
