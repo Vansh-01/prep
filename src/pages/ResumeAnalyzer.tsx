@@ -65,6 +65,8 @@ const ResumeAnalyzer = () => {
   const [profile, setProfile] = useState<{ job_profile: string | null; experience_level: string | null } | null>(null);
   const [jobDescription, setJobDescription] = useState("");
   const [showJobDescription, setShowJobDescription] = useState(false);
+  const [jobDescFile, setJobDescFile] = useState<File | null>(null);
+  const [jobDescDragOver, setJobDescDragOver] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -220,12 +222,47 @@ const ResumeAnalyzer = () => {
     setAnalysis(null);
 
     try {
+      // If job description file is uploaded, read its content
+      let jobDescText = jobDescription.trim();
+      if (jobDescFile && !jobDescText) {
+        if (jobDescFile.type === 'text/plain') {
+          jobDescText = await jobDescFile.text();
+        } else {
+          // For PDF/DOC files, convert to base64 and send to backend
+          const reader = new FileReader();
+          const base64Content = await new Promise<string>((resolve, reject) => {
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(jobDescFile);
+          });
+          
+          const { data, error } = await supabase.functions.invoke('analyze-resume', {
+            body: {
+              resumeUrl: urlToAnalyze,
+              jobProfile: profile?.job_profile || 'General',
+              experienceLevel: profile?.experience_level || 'fresher',
+              jobDescriptionFile: base64Content,
+              jobDescriptionFileName: jobDescFile.name
+            }
+          });
+
+          if (error) throw error;
+          setAnalysis(data.analysis);
+          toast({
+            title: "Analysis Complete",
+            description: "Your resume has been analyzed successfully!",
+          });
+          setAnalyzing(false);
+          return;
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke('analyze-resume', {
         body: {
           resumeUrl: urlToAnalyze,
           jobProfile: profile?.job_profile || 'General',
           experienceLevel: profile?.experience_level || 'fresher',
-          jobDescription: jobDescription.trim() || undefined
+          jobDescription: jobDescText || undefined
         }
       });
 
@@ -425,7 +462,7 @@ const ResumeAnalyzer = () => {
                   Job Description (Optional)
                 </CardTitle>
                 <CardDescription>
-                  Paste a job description for tailored matching analysis
+                  Upload a file or paste text for tailored matching
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -434,31 +471,140 @@ const ResumeAnalyzer = () => {
                     <Button variant="outline" className="w-full justify-between">
                       <span className="flex items-center gap-2">
                         <ClipboardList className="w-4 h-4" />
-                        {jobDescription ? "Edit Job Description" : "Add Job Description"}
+                        {jobDescription || jobDescFile ? "Edit Job Description" : "Add Job Description"}
                       </span>
-                      {jobDescription && (
+                      {(jobDescription || jobDescFile) && (
                         <Badge variant="secondary" className="ml-2">Added</Badge>
                       )}
                     </Button>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-4 space-y-3">
+                  <CollapsibleContent className="mt-4 space-y-4">
+                    {/* File Upload Option */}
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setJobDescDragOver(true); }}
+                      onDragLeave={(e) => { e.preventDefault(); setJobDescDragOver(false); }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setJobDescDragOver(false);
+                        const droppedFile = e.dataTransfer.files[0];
+                        if (droppedFile) {
+                          const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+                          if (!allowedTypes.includes(droppedFile.type)) {
+                            toast({
+                              title: "Invalid File Type",
+                              description: "Please upload a PDF, DOC, DOCX, or TXT file.",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+                          if (droppedFile.size > 2 * 1024 * 1024) {
+                            toast({
+                              title: "File Too Large",
+                              description: "Please upload a file smaller than 2MB.",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+                          setJobDescFile(droppedFile);
+                          setJobDescription("");
+                        }
+                      }}
+                      onClick={() => document.getElementById('job-desc-input')?.click()}
+                      className={`
+                        border-2 border-dashed rounded-lg p-4 text-center transition-all cursor-pointer
+                        ${jobDescDragOver 
+                          ? 'border-primary bg-primary/5' 
+                          : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                        }
+                        ${jobDescFile ? 'border-green-500 bg-green-500/5' : ''}
+                      `}
+                    >
+                      <input
+                        id="job-desc-input"
+                        type="file"
+                        accept=".pdf,.doc,.docx,.txt"
+                        onChange={(e) => {
+                          const selectedFile = e.target.files?.[0];
+                          if (selectedFile) {
+                            const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+                            if (!allowedTypes.includes(selectedFile.type)) {
+                              toast({
+                                title: "Invalid File Type",
+                                description: "Please upload a PDF, DOC, DOCX, or TXT file.",
+                                variant: "destructive",
+                              });
+                              return;
+                            }
+                            if (selectedFile.size > 2 * 1024 * 1024) {
+                              toast({
+                                title: "File Too Large",
+                                description: "Please upload a file smaller than 2MB.",
+                                variant: "destructive",
+                              });
+                              return;
+                            }
+                            setJobDescFile(selectedFile);
+                            setJobDescription("");
+                          }
+                        }}
+                        className="hidden"
+                      />
+                      {jobDescFile ? (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <FileText className="w-5 h-5 text-green-500" />
+                            <span className="text-sm font-medium truncate max-w-[150px]">{jobDescFile.name}</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setJobDescFile(null);
+                            }}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          <Upload className="w-6 h-6 mx-auto text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">
+                            Drop file or click (PDF, DOC, TXT)
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-px bg-border" />
+                      <span className="text-xs text-muted-foreground">or paste text</span>
+                      <div className="flex-1 h-px bg-border" />
+                    </div>
+
                     <Textarea
-                      placeholder="Paste the job description here to get tailored recommendations..."
+                      placeholder="Paste the job description here..."
                       value={jobDescription}
-                      onChange={(e) => setJobDescription(e.target.value)}
-                      className="min-h-[150px] resize-y"
+                      onChange={(e) => {
+                        setJobDescription(e.target.value);
+                        if (e.target.value) setJobDescFile(null);
+                      }}
+                      className="min-h-[120px] resize-y"
                       maxLength={5000}
                     />
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span>{jobDescription.length}/5000 characters</span>
-                      {jobDescription && (
+                      {(jobDescription || jobDescFile) && (
                         <Button 
                           variant="ghost" 
                           size="sm"
-                          onClick={() => setJobDescription("")}
+                          onClick={() => {
+                            setJobDescription("");
+                            setJobDescFile(null);
+                          }}
                         >
                           <X className="w-3 h-3 mr-1" />
-                          Clear
+                          Clear All
                         </Button>
                       )}
                     </div>

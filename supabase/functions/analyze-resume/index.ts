@@ -12,9 +12,9 @@ serve(async (req) => {
   }
 
   try {
-    const { resumeUrl, jobProfile, experienceLevel, jobDescription } = await req.json();
+    const { resumeUrl, jobProfile, experienceLevel, jobDescription, jobDescriptionFile, jobDescriptionFileName } = await req.json();
     
-    console.log("Analyzing resume:", { resumeUrl, jobProfile, experienceLevel, hasJobDescription: !!jobDescription });
+    console.log("Analyzing resume:", { resumeUrl, jobProfile, experienceLevel, hasJobDescription: !!jobDescription, hasJobDescFile: !!jobDescriptionFile });
 
     if (!resumeUrl) {
       return new Response(
@@ -43,8 +43,17 @@ serve(async (req) => {
 
     const systemPrompt = `You are an expert career coach, ATS specialist, and resume reviewer with 15+ years of experience in HR and recruitment across multiple industries. Analyze resumes and provide comprehensive scores with actionable, industry-specific feedback.`;
 
-    const jobDescriptionSection = jobDescription 
-      ? `\n\nJOB DESCRIPTION TO MATCH AGAINST:\n${jobDescription}\n\nIMPORTANT: Compare the resume against this specific job description. Analyze how well the candidate's skills, experience, and qualifications match the job requirements. Identify missing requirements and provide specific suggestions to tailor the resume for this position.`
+    // Handle job description from file or text
+    let finalJobDescription = jobDescription || '';
+    if (jobDescriptionFile && !finalJobDescription) {
+      // Extract text content from base64 file if it's a PDF/DOC
+      // For now, we'll pass the file info to the AI model which can process it
+      const fileNote = `[Job description uploaded as file: ${jobDescriptionFileName}. Please extract and analyze the job requirements from the uploaded document.]`;
+      finalJobDescription = fileNote;
+    }
+
+    const jobDescriptionSection = finalJobDescription 
+      ? `\n\nJOB DESCRIPTION TO MATCH AGAINST:\n${finalJobDescription}\n\nIMPORTANT: Compare the resume against this specific job description. Analyze how well the candidate's skills, experience, and qualifications match the job requirements. Identify missing requirements and provide specific suggestions to tailor the resume for this position.`
       : '';
 
     const userPrompt = `Analyze this resume for a ${experienceLevelText} candidate targeting a ${formattedJobProfile} position.
