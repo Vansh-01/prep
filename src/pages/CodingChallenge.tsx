@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import Editor from "@monaco-editor/react";
-import { Play, Home, CheckCircle, Trash2 } from "lucide-react";
+import { Play, Home, CheckCircle, Trash2, Terminal } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { highlightConsoleOutput } from "@/utils/consoleSyntaxHighlight";
@@ -51,6 +52,7 @@ const CodingChallenge = () => {
   const { toast } = useToast();
   const [language, setLanguage] = useState("javascript");
   const [code, setCode] = useState(challengeTemplates.javascript);
+  const [userInput, setUserInput] = useState("");
   const [testResults, setTestResults] = useState<string[]>([]);
   const [standardOutput, setStandardOutput] = useState<string[]>([]);
   const [errorOutput, setErrorOutput] = useState<string[]>([]);
@@ -76,6 +78,7 @@ const CodingChallenge = () => {
   const handleLanguageChange = (newLanguage: string) => {
     setLanguage(newLanguage);
     setCode(challengeTemplates[newLanguage]);
+    setUserInput("");
     setTestResults([]);
     setStandardOutput([]);
     setErrorOutput([]);
@@ -88,7 +91,7 @@ const CodingChallenge = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke('execute-code', {
-        body: { code, language }
+        body: { code, language, stdin: userInput }
       });
 
       if (error) throw error;
@@ -228,7 +231,7 @@ const CodingChallenge = () => {
 
                 <div className="border-t pt-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold">Console Output</h3>
+                    <h3 className="text-lg font-semibold">Console</h3>
                     <Button 
                       variant="outline" 
                       size="sm"
@@ -242,10 +245,24 @@ const CodingChallenge = () => {
                     </Button>
                   </div>
                   <div className="grid grid-cols-1 gap-4">
+                    {/* User Input */}
+                    <div>
+                      <h4 className="text-sm font-medium mb-2 text-muted-foreground flex items-center gap-2">
+                        <Terminal className="w-4 h-4" />
+                        Input (stdin)
+                      </h4>
+                      <Textarea
+                        placeholder="Enter input for your program here (each line is a separate input)..."
+                        value={userInput}
+                        onChange={(e) => setUserInput(e.target.value)}
+                        className="font-mono text-sm min-h-[80px] bg-muted"
+                      />
+                    </div>
+
                     {/* Standard Output */}
                     <div>
                       <h4 className="text-sm font-medium mb-2 text-muted-foreground">Standard Output</h4>
-                      <div className="bg-muted rounded-lg p-4 min-h-[120px] font-mono text-sm overflow-auto">
+                      <div className="bg-muted rounded-lg p-4 min-h-[100px] max-h-[150px] font-mono text-sm overflow-auto">
                         {standardOutput.length === 0 ? (
                           <div className="text-muted-foreground">No output</div>
                         ) : (
@@ -262,7 +279,7 @@ const CodingChallenge = () => {
                     {/* Error Output */}
                     <div>
                       <h4 className="text-sm font-medium mb-2 text-destructive">Errors & Warnings</h4>
-                      <div className="bg-muted rounded-lg p-4 min-h-[120px] font-mono text-sm overflow-auto">
+                      <div className="bg-muted rounded-lg p-4 min-h-[80px] max-h-[120px] font-mono text-sm overflow-auto">
                         {errorOutput.length === 0 ? (
                           <div className="text-muted-foreground">No errors</div>
                         ) : (
