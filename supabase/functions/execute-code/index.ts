@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { code, language } = await req.json();
+    const { code, language, stdin } = await req.json();
 
     // Map language names to Piston API language identifiers
     const languageMap: Record<string, string> = {
@@ -41,6 +41,7 @@ serve(async (req) => {
             content: code,
           },
         ],
+        stdin: stdin || '',
       }),
     });
 

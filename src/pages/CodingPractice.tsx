@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import Editor from "@monaco-editor/react";
-import { Play, RotateCcw, Home, Trash2 } from "lucide-react";
+import { Play, RotateCcw, Home, Trash2, Terminal } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { highlightConsoleOutput } from "@/utils/consoleSyntaxHighlight";
@@ -100,12 +101,14 @@ const CodingPractice = () => {
   const { toast } = useToast();
   const [language, setLanguage] = useState("javascript");
   const [code, setCode] = useState(languageTemplates.javascript);
+  const [userInput, setUserInput] = useState("");
   const [standardOutput, setStandardOutput] = useState<string[]>([]);
   const [errorOutput, setErrorOutput] = useState<string[]>([]);
 
   const handleLanguageChange = (newLanguage: string) => {
     setLanguage(newLanguage);
     setCode(languageTemplates[newLanguage]);
+    setUserInput("");
     setStandardOutput([]);
     setErrorOutput([]);
   };
@@ -116,7 +119,7 @@ const CodingPractice = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke('execute-code', {
-        body: { code, language }
+        body: { code, language, stdin: userInput }
       });
 
       if (error) throw error;
@@ -144,6 +147,7 @@ const CodingPractice = () => {
 
   const handleReset = () => {
     setCode(languageTemplates[language]);
+    setUserInput("");
     setStandardOutput([]);
     setErrorOutput([]);
   };
@@ -209,7 +213,7 @@ const CodingPractice = () => {
 
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Console Output</h2>
+              <h2 className="text-xl font-semibold">Console</h2>
               <Button 
                 variant="outline" 
                 size="sm"
@@ -223,19 +227,33 @@ const CodingPractice = () => {
               </Button>
             </div>
             <div className="grid grid-cols-1 gap-4">
+              {/* User Input */}
+              <div>
+                <h3 className="text-sm font-medium mb-2 text-muted-foreground flex items-center gap-2">
+                  <Terminal className="w-4 h-4" />
+                  Input (stdin)
+                </h3>
+                <Textarea
+                  placeholder="Enter input for your program here (each line is a separate input)..."
+                  value={userInput}
+                  onChange={(e) => setUserInput(e.target.value)}
+                  className="font-mono text-sm min-h-[100px] bg-muted"
+                />
+              </div>
+
               {/* Standard Output */}
               <div>
                 <h3 className="text-sm font-medium mb-2 text-muted-foreground">Standard Output</h3>
-                <div className="bg-muted rounded-lg p-4 min-h-[230px] font-mono text-sm overflow-auto">
+                <div className="bg-muted rounded-lg p-4 min-h-[150px] max-h-[180px] font-mono text-sm overflow-auto">
                   {standardOutput.length === 0 ? (
                     <div className="text-muted-foreground">Run your code to see the output here...</div>
                   ) : (
-                          standardOutput.map((line, index) => (
-                            <div key={index} className="flex gap-4 hover:bg-accent/50">
-                              <span className="text-muted-foreground select-none min-w-[2rem] text-right">{index + 1}</span>
-                              <span className="flex-1">{highlightConsoleOutput(line)}</span>
-                            </div>
-                          ))
+                    standardOutput.map((line, index) => (
+                      <div key={index} className="flex gap-4 hover:bg-accent/50">
+                        <span className="text-muted-foreground select-none min-w-[2rem] text-right">{index + 1}</span>
+                        <span className="flex-1">{highlightConsoleOutput(line)}</span>
+                      </div>
+                    ))
                   )}
                 </div>
               </div>
@@ -243,16 +261,16 @@ const CodingPractice = () => {
               {/* Error Output */}
               <div>
                 <h3 className="text-sm font-medium mb-2 text-destructive">Errors & Warnings</h3>
-                <div className="bg-muted rounded-lg p-4 min-h-[230px] font-mono text-sm overflow-auto">
+                <div className="bg-muted rounded-lg p-4 min-h-[100px] max-h-[150px] font-mono text-sm overflow-auto">
                   {errorOutput.length === 0 ? (
                     <div className="text-muted-foreground">No errors</div>
                   ) : (
-                          errorOutput.map((line, index) => (
-                            <div key={index} className="flex gap-4 hover:bg-accent/50">
-                              <span className="text-muted-foreground select-none min-w-[2rem] text-right">{index + 1}</span>
-                              <span className="flex-1 text-destructive">{highlightConsoleOutput(line)}</span>
-                            </div>
-                          ))
+                    errorOutput.map((line, index) => (
+                      <div key={index} className="flex gap-4 hover:bg-accent/50">
+                        <span className="text-muted-foreground select-none min-w-[2rem] text-right">{index + 1}</span>
+                        <span className="flex-1 text-destructive">{highlightConsoleOutput(line)}</span>
+                      </div>
+                    ))
                   )}
                 </div>
               </div>
