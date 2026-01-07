@@ -4,12 +4,14 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import Editor from "@monaco-editor/react";
-import { Play, Home, CheckCircle, Trash2, Terminal, Clock, Pause, RotateCcw } from "lucide-react";
+import { Play, Home, CheckCircle, Trash2, Terminal, Clock, Pause, RotateCcw, ChevronLeft, List } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { highlightConsoleOutput } from "@/utils/consoleSyntaxHighlight";
 import { supabase } from "@/integrations/supabase/client";
+import { codingChallenges, getDifficultyColor, type CodingChallenge as ChallengeType, type Difficulty } from "@/data/codingChallenges";
 
 const TIMER_OPTIONS = [
   { label: "15 min", value: 15 * 60 },
@@ -18,54 +20,25 @@ const TIMER_OPTIONS = [
   { label: "60 min", value: 60 * 60 },
 ];
 
-const challengeTemplates: Record<string, string> = {
-  javascript: `function twoSum(nums, target) {
-  // Write your solution here
-  
-}`,
-  python: `def two_sum(nums, target):
-    # Write your solution here
-    pass`,
-  java: `class Solution {
-    public int[] twoSum(int[] nums, int target) {
-        // Write your solution here
-        
-    }
-}`,
-  cpp: `#include <vector>
-using namespace std;
-
-class Solution {
-public:
-    vector<int> twoSum(vector<int>& nums, int target) {
-        // Write your solution here
-        
-    }
-};`,
-  c: `#include <stdlib.h>
-
-int* twoSum(int* nums, int numsSize, int target, int* returnSize) {
-    // Write your solution here
-    
-}`,
-  typescript: `function twoSum(nums: number[], target: number): number[] {
-  // Write your solution here
-  
-}`,
-};
-
 const CodingChallenge = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Challenge selection state
+  const [showChallengeList, setShowChallengeList] = useState(true);
+  const [selectedChallenge, setSelectedChallenge] = useState<ChallengeType>(codingChallenges[0]);
+  const [difficultyFilter, setDifficultyFilter] = useState<Difficulty | "All">("All");
+  
+  // Code editor state
   const [language, setLanguage] = useState("javascript");
-  const [code, setCode] = useState(challengeTemplates.javascript);
+  const [code, setCode] = useState(codingChallenges[0].templates.javascript);
   const [userInput, setUserInput] = useState("");
   const [testResults, setTestResults] = useState<string[]>([]);
   const [standardOutput, setStandardOutput] = useState<string[]>([]);
   const [errorOutput, setErrorOutput] = useState<string[]>([]);
   
   // Timer state
-  const [timerDuration, setTimerDuration] = useState(30 * 60); // Default 30 min
+  const [timerDuration, setTimerDuration] = useState(30 * 60);
   const [timeRemaining, setTimeRemaining] = useState(30 * 60);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerStarted, setTimerStarted] = useState(false);
@@ -137,27 +110,20 @@ const CodingChallenge = () => {
     return "text-primary";
   };
 
-  const challenge = {
-    title: "Two Sum",
-    difficulty: "Easy",
-    description: "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.",
-    examples: [
-      {
-        input: "nums = [2,7,11,15], target = 9",
-        output: "[0,1]",
-        explanation: "Because nums[0] + nums[1] == 9, we return [0, 1]"
-      }
-    ],
-    testCases: [
-      { input: [[2, 7, 11, 15], 9], expected: [0, 1] },
-      { input: [[3, 2, 4], 6], expected: [1, 2] },
-      { input: [[3, 3], 6], expected: [0, 1] }
-    ]
+  const handleSelectChallenge = (challenge: ChallengeType) => {
+    setSelectedChallenge(challenge);
+    setCode(challenge.templates[language] || challenge.templates.javascript);
+    setShowChallengeList(false);
+    setUserInput("");
+    setTestResults([]);
+    setStandardOutput([]);
+    setErrorOutput([]);
+    handleResetTimer();
   };
 
   const handleLanguageChange = (newLanguage: string) => {
     setLanguage(newLanguage);
-    setCode(challengeTemplates[newLanguage]);
+    setCode(selectedChallenge.templates[newLanguage] || selectedChallenge.templates.javascript);
     setUserInput("");
     setTestResults([]);
     setStandardOutput([]);
@@ -199,15 +165,84 @@ const CodingChallenge = () => {
     }
   };
 
+  const filteredChallenges = difficultyFilter === "All" 
+    ? codingChallenges 
+    : codingChallenges.filter(c => c.difficulty === difficultyFilter);
+
+  // Challenge Selection View
+  if (showChallengeList) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold">Coding Challenges</h1>
+              <p className="text-muted-foreground mt-1">Select a challenge to practice your coding skills</p>
+            </div>
+            <Button variant="outline" onClick={() => navigate("/interview-mode")}>
+              <Home className="w-4 h-4 mr-2" />
+              Back to Modes
+            </Button>
+          </div>
+
+          {/* Difficulty Filter */}
+          <div className="flex gap-2 mb-6">
+            {(["All", "Easy", "Medium", "Hard"] as const).map((difficulty) => (
+              <Button
+                key={difficulty}
+                variant={difficultyFilter === difficulty ? "default" : "outline"}
+                size="sm"
+                onClick={() => setDifficultyFilter(difficulty)}
+              >
+                {difficulty}
+              </Button>
+            ))}
+          </div>
+
+          {/* Challenge Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredChallenges.map((challenge) => (
+              <Card
+                key={challenge.id}
+                className="p-6 cursor-pointer hover:border-primary transition-colors"
+                onClick={() => handleSelectChallenge(challenge)}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <h3 className="font-semibold text-lg">{challenge.title}</h3>
+                  <Badge className={getDifficultyColor(challenge.difficulty)}>
+                    {challenge.difficulty}
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  {challenge.description}
+                </p>
+                <div className="mt-4 flex items-center text-xs text-muted-foreground">
+                  <span>{Object.keys(challenge.templates).length} languages supported</span>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Challenge Solving View
   return (
     <div className="min-h-screen bg-background">
       <div className="container px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold">{challenge.title}</h1>
-            <span className="inline-block px-3 py-1 mt-2 text-sm rounded-full bg-primary/10 text-primary">
-              {challenge.difficulty}
-            </span>
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={() => setShowChallengeList(true)}>
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              <List className="w-4 h-4" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold">{selectedChallenge.title}</h1>
+              <Badge className={`mt-2 ${getDifficultyColor(selectedChallenge.difficulty)}`}>
+                {selectedChallenge.difficulty}
+              </Badge>
+            </div>
           </div>
           
           {/* Timer Section */}
@@ -271,10 +306,10 @@ const CodingChallenge = () => {
                 <TabsTrigger value="examples">Examples</TabsTrigger>
               </TabsList>
               <TabsContent value="description" className="mt-4">
-                <p className="text-muted-foreground">{challenge.description}</p>
+                <p className="text-muted-foreground">{selectedChallenge.description}</p>
               </TabsContent>
               <TabsContent value="examples" className="mt-4">
-                {challenge.examples.map((example, index) => (
+                {selectedChallenge.examples.map((example, index) => (
                   <div key={index} className="mb-4">
                     <p className="font-semibold">Example {index + 1}:</p>
                     <div className="bg-muted p-3 rounded-lg mt-2 font-mono text-sm">
@@ -303,7 +338,6 @@ const CodingChallenge = () => {
                       <SelectItem value="python">Python</SelectItem>
                       <SelectItem value="java">Java</SelectItem>
                       <SelectItem value="cpp">C++</SelectItem>
-                      <SelectItem value="c">C</SelectItem>
                     </SelectContent>
                   </Select>
                   <Button size="sm" onClick={handleRunTests}>
@@ -315,7 +349,7 @@ const CodingChallenge = () => {
               <div className="border rounded-lg overflow-hidden">
                 <Editor
                   height="300px"
-                  language={language}
+                  language={language === "cpp" ? "cpp" : language}
                   theme="vs-dark"
                   value={code}
                   onChange={(value) => setCode(value || "")}
