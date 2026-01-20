@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import Editor from "@monaco-editor/react";
-import { Play, Home, CheckCircle, Trash2, Terminal, Clock, Pause, RotateCcw, ChevronLeft, List, Lightbulb, Eye, EyeOff } from "lucide-react";
+import { Play, Home, CheckCircle, Trash2, Terminal, Clock, Pause, RotateCcw, ChevronLeft, List, Lightbulb, Eye, EyeOff, Trophy, Send } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { highlightConsoleOutput } from "@/utils/consoleSyntaxHighlight";
@@ -45,6 +45,10 @@ const CodingChallenge = () => {
   const [timeRemaining, setTimeRemaining] = useState(30 * 60);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerStarted, setTimerStarted] = useState(false);
+  
+  // Submission state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasCompleted, setHasCompleted] = useState(false);
 
   const formatTime = useCallback((seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -122,6 +126,7 @@ const CodingChallenge = () => {
     setStandardOutput([]);
     setErrorOutput([]);
     setRevealedHints(0);
+    setHasCompleted(false);
     handleResetTimer();
   };
 
@@ -185,7 +190,94 @@ const CodingChallenge = () => {
     }
   };
 
-  const filteredChallenges = difficultyFilter === "All" 
+  const calculatePoints = (difficulty: string, timeSeconds: number) => {
+    const basePoints = difficulty === "Easy" ? 100 : difficulty === "Medium" ? 200 : 300;
+    const timeBonus = Math.max(0, Math.floor((timerDuration - timeSeconds) / 60) * 5);
+    return basePoints + timeBonus;
+  };
+
+  const handleSubmitChallenge = async () => {
+    setIsSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: "Sign in required",
+          description: "Please sign in to submit your solution and appear on the leaderboard.",
+          variant: "destructive",
+        });
+        navigate("/auth");
+        return;
+      }
+
+      const completionTime = timerDuration - timeRemaining;
+      const points = calculatePoints(selectedChallenge.difficulty, completionTime);
+
+      // Check if already completed this challenge
+      const { data: existing } = await supabase
+        .from("challenge_completions")
+        .select("id, completion_time_seconds")
+        .eq("user_id", user.id)
+        .eq("challenge_id", selectedChallenge.id)
+        .maybeSingle();
+
+      if (existing) {
+        // Update only if faster
+        if (completionTime < existing.completion_time_seconds) {
+          await supabase
+            .from("challenge_completions")
+            .update({
+              completion_time_seconds: completionTime,
+              points,
+              language,
+              code,
+            })
+            .eq("id", existing.id);
+          
+          toast({
+            title: "New personal best! 🎉",
+            description: `You improved your time! +${points} points`,
+          });
+        } else {
+          toast({
+            title: "Challenge already completed",
+            description: "Your previous time was faster. Keep practicing!",
+          });
+        }
+      } else {
+        // Insert new completion
+        await supabase
+          .from("challenge_completions")
+          .insert({
+            user_id: user.id,
+            challenge_id: selectedChallenge.id,
+            language,
+            completion_time_seconds: completionTime,
+            points,
+            code,
+          });
+
+        toast({
+          title: "Challenge completed! 🎉",
+          description: `You earned ${points} points! Check the leaderboard.`,
+        });
+      }
+
+      setHasCompleted(true);
+    } catch (error) {
+      console.error("Error submitting challenge:", error);
+      toast({
+        title: "Error",
+        description: "Failed to submit challenge. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const filteredChallenges = difficultyFilter === "All"
     ? codingChallenges 
     : codingChallenges.filter(c => c.difficulty === difficultyFilter);
 
@@ -199,10 +291,16 @@ const CodingChallenge = () => {
               <h1 className="text-3xl font-bold">Coding Challenges</h1>
               <p className="text-muted-foreground mt-1">Select a challenge to practice your coding skills</p>
             </div>
-            <Button variant="outline" onClick={() => navigate("/interview-mode")}>
-              <Home className="w-4 h-4 mr-2" />
-              Back to Modes
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => navigate("/leaderboard")}>
+                <Trophy className="w-4 h-4 mr-2" />
+                Leaderboard
+              </Button>
+              <Button variant="outline" onClick={() => navigate("/interview-mode")}>
+                <Home className="w-4 h-4 mr-2" />
+                Back to Modes
+              </Button>
+            </div>
           </div>
 
           {/* Difficulty Filter */}
@@ -440,9 +538,29 @@ const CodingChallenge = () => {
                       <SelectItem value="cpp">C++</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button size="sm" onClick={handleRunTests}>
+                  <Button size="sm" variant="outline" onClick={handleRunTests}>
                     <Play className="w-4 h-4 mr-2" />
-                    Run Tests
+                    Run
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    onClick={handleSubmitChallenge} 
+                    disabled={isSubmitting}
+                    className={hasCompleted ? "bg-green-600 hover:bg-green-700" : ""}
+                  >
+                    {isSubmitting ? (
+                      "Submitting..."
+                    ) : hasCompleted ? (
+                      <>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Completed
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Submit
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>

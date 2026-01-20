@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      challenge_completions: {
+        Row: {
+          challenge_id: string
+          code: string | null
+          completion_time_seconds: number
+          created_at: string
+          id: string
+          language: string
+          points: number
+          user_id: string
+        }
+        Insert: {
+          challenge_id: string
+          code?: string | null
+          completion_time_seconds: number
+          created_at?: string
+          id?: string
+          language: string
+          points?: number
+          user_id: string
+        }
+        Update: {
+          challenge_id?: string
+          code?: string | null
+          completion_time_seconds?: number
+          created_at?: string
+          id?: string
+          language?: string
+          points?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       interview_sessions: {
         Row: {
           ai_feedback: string | null
