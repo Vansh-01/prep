@@ -12,6 +12,7 @@ import CodingPractice from "./pages/CodingPractice";
 import CodingChallenge from "./pages/CodingChallenge";
 import ResumeAnalyzer from "./pages/ResumeAnalyzer";
 import Leaderboard from "./pages/Leaderboard";
+import ProgressDashboard from "./pages/ProgressDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/coding-challenge" element={<CodingChallenge />} />
           <Route path="/resume-analyzer" element={<ResumeAnalyzer />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/progress" element={<ProgressDashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
