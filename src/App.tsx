@@ -8,6 +8,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import ProfileSettings from "./pages/ProfileSettings";
 import InterviewMode from "./pages/InterviewMode";
+import InterviewPractice from "./pages/InterviewPractice";
 import CodingPractice from "./pages/CodingPractice";
 import CodingChallenge from "./pages/CodingChallenge";
 import ResumeAnalyzer from "./pages/ResumeAnalyzer";
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/profile-settings" element={<ProfileSettings />} />
           <Route path="/interview-mode" element={<InterviewMode />} />
+          <Route path="/interview-practice" element={<InterviewPractice />} />
           <Route path="/coding-practice" element={<CodingPractice />} />
           <Route path="/coding-challenge" element={<CodingChallenge />} />
           <Route path="/resume-analyzer" element={<ResumeAnalyzer />} />

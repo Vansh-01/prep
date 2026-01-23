@@ -34,9 +34,9 @@ const InterviewMode = () => {
     {
       icon: MessageSquare,
       title: "Interview Practice",
-      description: "Practice your interview skills with AI-powered voice interviews",
-      path: "/",
-      action: () => checkAuthAndNavigate("/", true)
+      description: "Practice your interview skills with AI-powered voice interviews tailored to your job profile",
+      path: "/interview-practice",
+      action: () => checkAuthAndNavigate("/interview-practice")
     },
     {
       icon: Code,
