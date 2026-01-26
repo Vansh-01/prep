@@ -58,23 +58,20 @@ const InterviewMode = () => {
       description: "Get AI-powered feedback on your resume to stand out",
       path: "/resume-analyzer",
       action: () => checkAuthAndNavigate("/resume-analyzer")
+    },
+    {
+      icon: BarChart3,
+      title: "Your Progress",
+      description: "View all your stats, streaks, completed challenges, and performance history",
+      path: "/progress",
+      action: () => checkAuthAndNavigate("/progress")
     }
   ];
 
   return (
     <div className="min-h-screen bg-background">
       <div className="container px-4 sm:px-6 lg:px-8 py-20">
-        <div className="max-w-4xl mx-auto">
-          {/* Stats Dashboard Link */}
-          <div className="flex justify-end mb-6">
-            <Button variant="outline" asChild className="gap-2">
-              <Link to="/progress">
-                <BarChart3 className="w-4 h-4" />
-                View Your Stats & History
-              </Link>
-            </Button>
-          </div>
-
+        <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12 animate-fade-in">
             <h1 className="text-4xl sm:text-5xl font-bold mb-4">
               Choose Your Practice Mode
@@ -84,7 +81,7 @@ const InterviewMode = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             {modes.map((mode, index) => (
               <Card 
                 key={index}
