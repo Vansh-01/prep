@@ -53,7 +53,7 @@ export default function Auth() {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        navigate("/dashboard");
+        navigate("/interview-mode");
       }
     };
     checkUser();
@@ -61,7 +61,7 @@ export default function Auth() {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        navigate("/dashboard");
+        navigate("/interview-mode");
       }
     });
 
