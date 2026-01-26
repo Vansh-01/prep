@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquare, Code, Trophy, FileText } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { MessageSquare, Code, Trophy, FileText, BarChart3 } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -65,6 +65,16 @@ const InterviewMode = () => {
     <div className="min-h-screen bg-background">
       <div className="container px-4 sm:px-6 lg:px-8 py-20">
         <div className="max-w-4xl mx-auto">
+          {/* Stats Dashboard Link */}
+          <div className="flex justify-end mb-6">
+            <Button variant="outline" asChild className="gap-2">
+              <Link to="/progress">
+                <BarChart3 className="w-4 h-4" />
+                View Your Stats & History
+              </Link>
+            </Button>
+          </div>
+
           <div className="text-center mb-12 animate-fade-in">
             <h1 className="text-4xl sm:text-5xl font-bold mb-4">
               Choose Your Practice Mode
