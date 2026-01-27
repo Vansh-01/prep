@@ -467,7 +467,7 @@ export default function Dashboard() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-2xl">
               <Sparkles className="w-6 h-6 text-primary" />
-              Welcome to Interview Coach AI!
+              Welcome to PrepMaster!
             </DialogTitle>
             <DialogDescription className="text-base pt-2">
               Let's get you started on your journey to interview mastery
@@ -542,7 +542,7 @@ export default function Dashboard() {
       <header className="border-b bg-card">
         <div className="container px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <Link to="/" className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            Interview Coach AI
+            PrepMaster
           </Link>
           
           <DropdownMenu>
