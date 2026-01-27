@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquare, Code, Trophy, FileText, LayoutDashboard, User, LogOut } from "lucide-react";
+import { MessageSquare, Code, Trophy, FileText, LayoutDashboard, User, LogOut, Target, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -13,20 +13,55 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useEffect, useState } from "react";
+import { Progress } from "@/components/ui/progress";
+
+interface UserStats {
+  interviewsCompleted: number;
+  challengesCompleted: number;
+  totalPoints: number;
+}
 
 const InterviewMode = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [stats, setStats] = useState<UserStats>({
+    interviewsCompleted: 0,
+    challengesCompleted: 0,
+    totalPoints: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const getUser = async () => {
+    const fetchUserData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user?.email) {
-        setUserEmail(session.user.email);
+      if (session?.user) {
+        setUserEmail(session.user.email || null);
+
+        // Fetch interview sessions count
+        const { count: interviewCount } = await supabase
+          .from("interview_sessions")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", session.user.id);
+
+        // Fetch challenge completions
+        const { data: challengeData } = await supabase
+          .from("challenge_completions")
+          .select("points")
+          .eq("user_id", session.user.id);
+
+        const challengesCompleted = challengeData?.length || 0;
+        const totalPoints = challengeData?.reduce((sum, c) => sum + (c.points || 0), 0) || 0;
+
+        setStats({
+          interviewsCompleted: interviewCount || 0,
+          challengesCompleted,
+          totalPoints,
+        });
       }
+      setIsLoading(false);
     };
-    getUser();
+    fetchUserData();
   }, []);
 
   const handleLogout = async () => {
@@ -165,6 +200,62 @@ const InterviewMode = () => {
             <p className="text-lg text-muted-foreground">
               Select how you want to practice and improve your skills
             </p>
+          </div>
+
+          {/* Progress Tracker */}
+          <div className="mb-10 p-6 rounded-xl border bg-card shadow-soft">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Target className="h-5 w-5 text-primary" />
+              Your Progress
+            </h3>
+            {isLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-20 bg-muted animate-pulse rounded-lg" />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full bg-primary/10">
+                      <MessageSquare className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{stats.interviewsCompleted}</p>
+                      <p className="text-sm text-muted-foreground">Interviews Completed</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full bg-primary/10">
+                      <Code className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{stats.challengesCompleted}</p>
+                      <p className="text-sm text-muted-foreground">Challenges Completed</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full bg-primary/10">
+                      <Zap className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{stats.totalPoints}</p>
+                      <p className="text-sm text-muted-foreground">Total Points</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {!isLoading && stats.interviewsCompleted === 0 && stats.challengesCompleted === 0 && (
+              <p className="mt-4 text-sm text-muted-foreground text-center">
+                Start practicing to track your progress!
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
