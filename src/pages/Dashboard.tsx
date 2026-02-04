@@ -547,7 +547,7 @@ export default function Dashboard() {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
-            <Link to="/" className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+            <Link to="/interview-mode" className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
               PrepMaster
             </Link>
           </div>
