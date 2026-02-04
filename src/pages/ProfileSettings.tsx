@@ -271,7 +271,7 @@ export default function ProfileSettings() {
       {/* Header */}
       <header className="border-b bg-card">
         <div className="container px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
-          <Link to="/dashboard">
+          <Link to="/interview-mode">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-5 w-5" />
             </Button>
