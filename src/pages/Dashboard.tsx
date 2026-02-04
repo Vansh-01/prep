@@ -19,7 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { User, LogOut, TrendingUp, Calendar, Award, Clock, Sparkles, Mic, BarChart3, Target, AlertCircle, Upload, FileText } from "lucide-react";
+import { User, LogOut, TrendingUp, Calendar, Award, Clock, Sparkles, Mic, BarChart3, Target, AlertCircle, Upload, FileText, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -541,9 +541,16 @@ export default function Dashboard() {
       {/* Header */}
       <header className="border-b bg-card">
         <div className="container px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <Link to="/" className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            PrepMaster
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link to="/interview-mode">
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </Link>
+            <Link to="/" className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+              PrepMaster
+            </Link>
+          </div>
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
