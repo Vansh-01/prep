@@ -6,7 +6,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { Upload, FileText, Loader2, Sparkles, CheckCircle, ArrowLeft, X, TrendingUp, AlertCircle, Shield, Target, Zap, Tag, Briefcase, ClipboardList } from "lucide-react";
+import { Upload, FileText, Loader2, Sparkles, CheckCircle, ArrowLeft, X, TrendingUp, AlertCircle, Shield, Target, Zap, Tag, Briefcase, ClipboardList, Download } from "lucide-react";
+import { generateResumePDF } from "@/utils/generateResumePDF";
 
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -630,9 +631,26 @@ const ResumeAnalyzer = () => {
                     <CardHeader className="pb-3">
                       <CardTitle className="flex items-center justify-between">
                         <span>Overall Score</span>
-                        <span className={`text-4xl font-bold ${getScoreColor(analysis.overallScore)}`}>
-                          {analysis.overallScore}
-                        </span>
+                        <div className="flex items-center gap-4">
+                          <span className={`text-4xl font-bold ${getScoreColor(analysis.overallScore)}`}>
+                            {analysis.overallScore}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const fileName = generateResumePDF(analysis);
+                              toast({
+                                title: "PDF Downloaded",
+                                description: `Analysis saved as ${fileName}`,
+                              });
+                            }}
+                            className="flex items-center gap-2"
+                          >
+                            <Download className="w-4 h-4" />
+                            Download PDF
+                          </Button>
+                        </div>
                       </CardTitle>
                       <CardDescription>{analysis.summary}</CardDescription>
                     </CardHeader>
