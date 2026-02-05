@@ -14,7 +14,6 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useEffect, useState } from "react";
 import { Progress } from "@/components/ui/progress";
- import WelcomeDialog from "@/components/WelcomeDialog";
 
 interface UserStats {
   interviewsCompleted: number;
@@ -32,7 +31,6 @@ const InterviewMode = () => {
     totalPoints: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
-   const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -60,13 +58,6 @@ const InterviewMode = () => {
           challengesCompleted,
           totalPoints,
         });
-         
-         // Check if this is a new user (first time visiting after signup/signin)
-         const hasSeenWelcome = localStorage.getItem("prepmaster_welcome_seen");
-         if (!hasSeenWelcome) {
-           setShowWelcome(true);
-           localStorage.setItem("prepmaster_welcome_seen", "true");
-         }
       }
       setIsLoading(false);
     };
@@ -82,10 +73,6 @@ const InterviewMode = () => {
     navigate("/");
   };
 
-   const handleWelcomeClose = (open: boolean) => {
-     setShowWelcome(open);
-   };
- 
   const checkAuthAndNavigate = async (path: string, scrollToDemo = false) => {
     const { data: { session } } = await supabase.auth.getSession();
     
@@ -140,8 +127,6 @@ const InterviewMode = () => {
 
   return (
     <div className="min-h-screen bg-background">
-       <WelcomeDialog open={showWelcome} onOpenChange={handleWelcomeClose} />
- 
       {/* Navigation Header */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
