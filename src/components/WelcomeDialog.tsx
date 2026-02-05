@@ -40,7 +40,6 @@
  
    const handleStartInterview = () => {
      onOpenChange(false);
-     navigate("/interview-practice");
    };
  
    const handleDismiss = () => {
@@ -77,15 +76,12 @@
          <div className="mt-4 p-4 rounded-lg bg-muted/50 border text-center">
            <h4 className="font-semibold mb-1">Ready to start?</h4>
            <p className="text-sm text-muted-foreground mb-4">
-             Head to the home page and click "Try the AI Interview Experience" to begin your first practice session!
+            Choose a practice mode below to begin your journey!
            </p>
            <div className="flex gap-3 justify-center">
              <Button onClick={handleStartInterview} className="gap-2">
                <Mic className="h-4 w-4" />
-               Start First Interview
-             </Button>
-             <Button variant="outline" onClick={handleDismiss}>
-               Got it!
+              Let's Go!
              </Button>
            </div>
          </div>
