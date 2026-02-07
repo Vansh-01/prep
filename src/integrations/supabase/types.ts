@@ -47,6 +47,30 @@ export type Database = {
         }
         Relationships: []
       }
+      company_profiles: {
+        Row: {
+          company_name: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_name: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_name?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       interview_sessions: {
         Row: {
           ai_feedback: string | null

@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,24 +10,103 @@ import { useToast } from "@/hooks/use-toast";
 import { Building2, ArrowLeft } from "lucide-react";
 
 export default function CompanyAuth() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [loginData, setLoginData] = useState({ email: "", password: "" });
-  const [signUpData, setSignUpData] = useState({ companyName: "", email: "", password: "", confirmPassword: "" });
+  const [signUpData, setSignUpData] = useState({
+    companyName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // Check if they have a company profile
+        const { data } = await supabase
+          .from("company_profiles")
+          .select("id")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+        if (data) {
+          navigate("/dashboard");
+        }
+      }
+    };
+    checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session) {
+        const { data } = await supabase
+          .from("company_profiles")
+          .select("id")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+        if (data) {
+          navigate("/dashboard");
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    toast({
-      title: "Company Login",
-      description: "Company portal is coming soon! We'll notify you when it's ready.",
-    });
-    setIsLoading(false);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginData.email,
+        password: loginData.password,
+      });
+
+      if (error) {
+        toast({
+          title: "Sign in failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Verify this is a company account
+      const { data: companyProfile } = await supabase
+        .from("company_profiles")
+        .select("id")
+        .eq("user_id", data.user.id)
+        .maybeSingle();
+
+      if (!companyProfile) {
+        await supabase.auth.signOut();
+        toast({
+          title: "Not a company account",
+          description: "This email is registered as a student account. Please use Student Login.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Welcome back!",
+        description: "You've successfully signed in to your company account.",
+      });
+    } catch {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (signUpData.password !== signUpData.confirmPassword) {
       toast({
         title: "Passwords don't match",
@@ -35,14 +115,75 @@ export default function CompanyAuth() {
       });
       return;
     }
+
+    if (signUpData.password.length < 6) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 6 characters.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    toast({
-      title: "Account Requested!",
-      description: "Your company account request has been submitted. We'll be in touch shortly.",
-    });
-    setSignUpData({ companyName: "", email: "", password: "", confirmPassword: "" });
-    setIsLoading(false);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: signUpData.email,
+        password: signUpData.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/for-companies`,
+          data: {
+            username: signUpData.companyName,
+            account_type: "company",
+          },
+        },
+      });
+
+      if (error) {
+        if (error.message.includes("already registered")) {
+          toast({
+            title: "Account exists",
+            description: "This email is already registered. Please sign in instead.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Sign up failed",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
+        return;
+      }
+
+      if (data.user) {
+        // Create company profile
+        const { error: profileError } = await supabase
+          .from("company_profiles")
+          .insert({
+            user_id: data.user.id,
+            company_name: signUpData.companyName,
+          });
+
+        if (profileError) {
+          console.error("Error creating company profile:", profileError);
+        }
+
+        toast({
+          title: "Account created!",
+          description: "Your company account has been created successfully.",
+        });
+        setSignUpData({ companyName: "", email: "", password: "", confirmPassword: "" });
+      }
+    } catch {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
