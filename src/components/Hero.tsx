@@ -15,14 +15,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import heroImage from "@/assets/hero-interview.jpg";
-import { ForCompaniesDialog } from "./ForCompaniesDialog";
 
 export const Hero = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [username, setUsername] = useState<string>("");
   const [avatarUrl, setAvatarUrl] = useState<string>("");
-  const [showCompaniesDialog, setShowCompaniesDialog] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -178,16 +176,11 @@ export const Hero = () => {
                 variant="outline" 
                 size="xl" 
                 className="border-2"
-                onClick={() => setShowCompaniesDialog(true)}
+                onClick={() => navigate("/for-companies")}
               >
                 For Companies
               </Button>
             </div>
-
-            <ForCompaniesDialog 
-              open={showCompaniesDialog} 
-              onOpenChange={setShowCompaniesDialog} 
-            />
             
             <div className="mt-12 flex flex-wrap gap-8 justify-center lg:justify-start text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
