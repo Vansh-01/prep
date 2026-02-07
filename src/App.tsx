@@ -14,6 +14,7 @@ import CodingChallenge from "./pages/CodingChallenge";
 import ResumeAnalyzer from "./pages/ResumeAnalyzer";
 import Leaderboard from "./pages/Leaderboard";
 import ProgressDashboard from "./pages/ProgressDashboard";
+import CompanyAuth from "./pages/CompanyAuth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
           <Route path="/resume-analyzer" element={<ResumeAnalyzer />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/progress" element={<ProgressDashboard />} />
+          <Route path="/for-companies" element={<CompanyAuth />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
