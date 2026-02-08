@@ -32,7 +32,7 @@ export default function CompanyAuth() {
           .eq("user_id", session.user.id)
           .maybeSingle();
         if (data) {
-          navigate("/dashboard");
+          navigate("/company-dashboard");
         }
       }
     };
@@ -46,7 +46,7 @@ export default function CompanyAuth() {
           .eq("user_id", session.user.id)
           .maybeSingle();
         if (data) {
-          navigate("/dashboard");
+          navigate("/company-dashboard");
         }
       }
     });
