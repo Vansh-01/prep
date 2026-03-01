@@ -182,6 +182,14 @@ export default function JobListings({ jobs, onRefresh, onCreateClick }: JobListi
                   <Button
                     variant="ghost"
                     size="icon"
+                    onClick={() => setEditingJob(job)}
+                    title="Edit listing"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => handleToggleStatus(job)}
                     disabled={togglingId === job.id}
                     title={job.status === "active" ? "Pause listing" : "Activate listing"}
