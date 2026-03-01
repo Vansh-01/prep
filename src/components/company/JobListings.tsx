@@ -255,6 +255,15 @@ export default function JobListings({ jobs, onRefresh, onCreateClick }: JobListi
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {editingJob && (
+        <EditJobDialog
+          open={!!editingJob}
+          onOpenChange={(open) => !open && setEditingJob(null)}
+          job={editingJob}
+          onJobUpdated={onRefresh}
+        />
+      )}
     </>
   );
 }
