@@ -16,6 +16,7 @@ import Leaderboard from "./pages/Leaderboard";
 import ProgressDashboard from "./pages/ProgressDashboard";
 import CompanyAuth from "./pages/CompanyAuth";
 import CompanyDashboard from "./pages/CompanyDashboard";
+import JobBoard from "./pages/JobBoard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
