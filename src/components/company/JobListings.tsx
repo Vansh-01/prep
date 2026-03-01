@@ -66,6 +66,7 @@ export default function JobListings({ jobs, onRefresh, onCreateClick }: JobListi
   const { toast } = useToast();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [editingJob, setEditingJob] = useState<JobPosting | null>(null);
 
   const handleToggleStatus = async (job: JobPosting) => {
     setTogglingId(job.id);
