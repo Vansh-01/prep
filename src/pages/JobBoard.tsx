@@ -79,8 +79,9 @@ export default function JobBoard() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [levelFilter, setLevelFilter] = useState("all");
   const [selectedJob, setSelectedJob] = useState<JobWithCompany | null>(null);
-
-  useEffect(() => {
+  const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set());
+  const [applying, setApplying] = useState(false);
+  const { toast } = useToast();
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
