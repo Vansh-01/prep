@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,9 +27,6 @@ import {
   ArrowLeft,
   DollarSign,
   Building2,
-  Send,
-  CheckCircle2,
-  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -79,9 +75,6 @@ export default function JobBoard() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [levelFilter, setLevelFilter] = useState("all");
   const [selectedJob, setSelectedJob] = useState<JobWithCompany | null>(null);
-  const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set());
-  const [applying, setApplying] = useState(false);
-  const { toast } = useToast();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -91,45 +84,9 @@ export default function JobBoard() {
         return;
       }
       fetchJobs();
-      fetchAppliedJobs(session.user.id);
     };
     checkAuth();
   }, [navigate]);
-
-  const fetchAppliedJobs = async (userId: string) => {
-    const { data } = await supabase
-      .from("job_applications")
-      .select("job_id")
-      .eq("user_id", userId);
-    if (data) {
-      setAppliedJobs(new Set(data.map((a: any) => a.job_id)));
-    }
-  };
-
-  const handleApply = async (jobId: string) => {
-    setApplying(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-
-    const { error } = await supabase
-      .from("job_applications")
-      .insert({ job_id: jobId, user_id: session.user.id });
-
-    if (error) {
-      toast({
-        title: "Application Failed",
-        description: error.code === "23505" ? "You've already applied to this job" : "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
-    } else {
-      setAppliedJobs((prev) => new Set(prev).add(jobId));
-      toast({
-        title: "Application Submitted!",
-        description: "Your profile has been shared with the company.",
-      });
-    }
-    setApplying(false);
-  };
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -331,22 +288,6 @@ export default function JobBoard() {
                 <p className="text-xs text-muted-foreground">
                   Posted {format(new Date(selectedJob.created_at), "MMMM d, yyyy")}
                 </p>
-
-                {appliedJobs.has(selectedJob.id) ? (
-                  <Button disabled className="w-full gap-2">
-                    <CheckCircle2 className="h-4 w-4" />
-                    Applied
-                  </Button>
-                ) : (
-                  <Button
-                    className="w-full gap-2"
-                    onClick={() => handleApply(selectedJob.id)}
-                    disabled={applying}
-                  >
-                    {applying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                    {applying ? "Submitting..." : "Apply Now"}
-                  </Button>
-                )}
               </div>
             </>
           )}
