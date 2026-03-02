@@ -19,7 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { User, LogOut, TrendingUp, Calendar, Award, Clock, Sparkles, Mic, BarChart3, Target, AlertCircle, Upload, FileText, ArrowLeft, Briefcase } from "lucide-react";
+import { User, LogOut, TrendingUp, Calendar, Award, Clock, Sparkles, Mic, BarChart3, Target, AlertCircle, Upload, FileText, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -567,12 +567,6 @@ export default function Dashboard() {
             <DropdownMenuContent align="end" className="w-56 bg-card z-50">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer" asChild>
-                <Link to="/jobs">
-                  <Briefcase className="mr-2 h-4 w-4" />
-                  <span>Job Board</span>
-                </Link>
-              </DropdownMenuItem>
               <DropdownMenuItem className="cursor-pointer" asChild>
                 <Link to="/profile-settings">
                   <User className="mr-2 h-4 w-4" />
