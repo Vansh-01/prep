@@ -568,15 +568,15 @@ export default function Dashboard() {
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="cursor-pointer" asChild>
-                <Link to="/profile-settings">
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Profile Settings</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer" asChild>
                 <Link to="/jobs">
                   <Briefcase className="mr-2 h-4 w-4" />
                   <span>Job Board</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer" asChild>
+                <Link to="/profile-settings">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile Settings</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
