@@ -19,7 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { User, LogOut, TrendingUp, Calendar, Award, Clock, Sparkles, Mic, BarChart3, Target, AlertCircle, Upload, FileText, ArrowLeft } from "lucide-react";
+import { User, LogOut, TrendingUp, Calendar, Award, Clock, Sparkles, Mic, BarChart3, Target, AlertCircle, Upload, FileText, ArrowLeft, Briefcase } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
