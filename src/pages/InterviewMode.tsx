@@ -162,6 +162,15 @@ const InterviewMode = () => {
               <Button
                 variant="ghost"
                 size="sm"
+                onClick={() => navigate("/jobs")}
+                className="gap-2"
+              >
+                <Briefcase className="h-4 w-4" />
+                Jobs
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => navigate("/profile-settings")}
                 className="gap-2"
               >
