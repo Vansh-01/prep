@@ -14,6 +14,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Briefcase,
   MapPin,
   Clock,
@@ -22,8 +28,10 @@ import {
   ToggleRight,
   Plus,
   Pencil,
+  Users,
 } from "lucide-react";
 import EditJobDialog from "./EditJobDialog";
+import ApplicantsList from "./ApplicantsList";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
