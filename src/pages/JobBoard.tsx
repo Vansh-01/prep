@@ -118,7 +118,7 @@ export default function JobBoard() {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/interview-mode")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
