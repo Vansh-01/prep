@@ -102,6 +102,24 @@ export default function ApplicantsList({ jobId }: ApplicantsListProps) {
     return profile;
   };
 
+  const handleStatusChange = async (applicationId: string, newStatus: string) => {
+    setUpdatingId(applicationId);
+    const { error } = await supabase
+      .from("job_applications")
+      .update({ status: newStatus })
+      .eq("id", applicationId);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to update status.", variant: "destructive" });
+    } else {
+      setApplicants((prev) =>
+        prev.map((a) => (a.id === applicationId ? { ...a, status: newStatus } : a))
+      );
+      toast({ title: "Status updated", description: `Application marked as ${newStatus}.` });
+    }
+    setUpdatingId(null);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-6">
@@ -126,49 +144,62 @@ export default function ApplicantsList({ jobId }: ApplicantsListProps) {
       {applicants.map((applicant) => (
         <div
           key={applicant.id}
-          className="flex items-center gap-4 p-3 rounded-lg border bg-card"
+          className="flex flex-col gap-3 p-4 rounded-lg border bg-card"
         >
-          <Avatar className="h-10 w-10">
-            <AvatarFallback className="bg-primary/10 text-primary">
-              {(applicant.profile?.username || "U").charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-sm truncate">
-              {applicant.profile?.username || "Anonymous User"}
-            </p>
-            <div className="flex items-center gap-2 flex-wrap mt-0.5">
-              {applicant.profile?.experience_level && (
-                <Badge variant="outline" className="text-xs">
-                  {applicant.profile.experience_level === "fresher" ? "Fresher" : "Experienced"}
-                </Badge>
-              )}
-              {formatJobProfile(applicant.profile?.job_profile ?? null) && (
-                <Badge variant="secondary" className="text-xs">
-                  {formatJobProfile(applicant.profile?.job_profile ?? null)}
-                </Badge>
-              )}
-              <Badge
-                variant={applicant.status === "pending" ? "outline" : "default"}
-                className="text-xs"
-              >
-                {applicant.status}
-              </Badge>
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10">
+              <AvatarFallback className="bg-primary/10 text-primary">
+                {(applicant.profile?.username || "U").charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm truncate">
+                {applicant.profile?.username || "Anonymous User"}
+              </p>
+              <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                {applicant.profile?.experience_level && (
+                  <Badge variant="outline" className="text-xs">
+                    {applicant.profile.experience_level === "fresher" ? "Fresher" : "Experienced"}
+                  </Badge>
+                )}
+                {formatJobProfile(applicant.profile?.job_profile ?? null) && (
+                  <Badge variant="secondary" className="text-xs">
+                    {formatJobProfile(applicant.profile?.job_profile ?? null)}
+                  </Badge>
+                )}
+              </div>
             </div>
+            {applicant.profile?.resume_url && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 shrink-0"
+                onClick={() => handleViewResume(applicant.profile!.resume_url!)}
+              >
+                <FileText className="h-3.5 w-3.5" />
+                Resume
+              </Button>
+            )}
           </div>
-
-          {applicant.profile?.resume_url && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 shrink-0"
-              onClick={() => handleViewResume(applicant.profile!.resume_url!)}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Status:</span>
+            <Select
+              value={applicant.status}
+              onValueChange={(val) => handleStatusChange(applicant.id, val)}
+              disabled={updatingId === applicant.id}
             >
-              <FileText className="h-3.5 w-3.5" />
-              Resume
-            </Button>
-          )}
+              <SelectTrigger className={`w-[140px] h-8 text-xs ${statusColors[applicant.status] || ""}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       ))}
     </div>
