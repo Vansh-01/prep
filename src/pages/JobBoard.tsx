@@ -265,6 +265,15 @@ export default function JobBoard() {
                     </div>
                   )}
                   <p className="text-sm text-muted-foreground line-clamp-2">{job.description}</p>
+                  <div className="flex justify-end pt-1">
+                    <Button
+                      size="sm"
+                      disabled={appliedJobs.has(job.id) || applyingJobId === job.id}
+                      onClick={(e) => { e.stopPropagation(); handleApply(job.id); }}
+                    >
+                      {appliedJobs.has(job.id) ? "Applied ✓" : applyingJobId === job.id ? "Applying..." : "Apply Now"}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
