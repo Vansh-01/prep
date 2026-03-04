@@ -190,6 +190,14 @@ export default function JobListings({ jobs, onRefresh, onCreateClick }: JobListi
                   <Button
                     variant="ghost"
                     size="icon"
+                    onClick={() => setViewingApplicantsJob(job)}
+                    title="View applicants"
+                  >
+                    <Users className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => setEditingJob(job)}
                     title="Edit listing"
                   >
